@@ -2,13 +2,12 @@ from flask import Flask, render_template_string, jsonify
 import psycopg2, random, os
 
 app = Flask(__name__)
-
-# YOUR SECURE NEON CONNECTION
 DB_URL = "postgresql://neondb_owner:npg_49bsxXGdfouV@ep-calm-sun-a4s6bd19-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 @app.route('/')
 def index():
-    return render_template_string("""
+    # Using a single-quote wrapped string for the HTML to protect the JS variables
+    return render_template_string('''
     <!DOCTYPE html>
     <html>
     <head>
@@ -24,8 +23,14 @@ def index():
             .trade-btn { background: var(--bloomberg-green); color: #000; border: none; padding: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         </style>
         <script>
+            // This now correctly parses the ID from the URL
             const urlParams = new URLSearchParams(window.location.search);
             const activeBroker = urlParams.get('broker') || 'HOUSE';
+
+            window.onload = function() {
+                document.getElementById('broker-display').innerText = activeBroker;
+                updateMarket();
+            };
 
             function loadAsset(song, audio, img) {
                 document.getElementById('current-song').innerText = song;
@@ -34,53 +39,51 @@ def index():
                 p.src = audio; p.play();
             }
 
-            async function update() {
+            async function updateMarket() {
                 const res = await fetch('/api/data');
                 const data = await res.json();
-                if (data.error) { console.error(data.error); return; }
                 document.getElementById('floor').innerHTML = data.roster.map((i, idx) => `
                     <div class="asset-row" onclick="loadAsset('${i.song}', '${i.audio}', '${i.image}')">
                         <div style="color:#444;">${1001+idx}</div>
-                        <div><b style="color:#fff;">${i.song.toUpperCase()}</b><br><span style="color:var(--bloomberg-green); font-size:8px;">CONTRACT ACTIVE</span></div>
+                        <div><b style="color:#fff;">${i.song.toUpperCase()}</b><br><span style="color:var(--bloomberg-green); font-size:8px;">4:00M CONTRACT</span></div>
                         <div style="color:var(--bloomberg-green); font-size:9px; border:1px solid; text-align:center;">${i.target_roi}% MBBO</div>
                         <div style="color:#666; text-align:center;">$${i.principal}.00</div>
                         <div class="price-ticker">$${i.current_price}</div>
-                        <div style="padding-left:20px;"><button class="trade-btn" onclick="alert('Trade logged for Broker: ' + activeBroker)">TRADE NOW</button></div>
+                        <div style="padding-left:20px;"><button class="trade-btn" onclick="event.stopPropagation(); alert('Trade Logged for Broker: ' + activeBroker)">TRADE NOW</button></div>
                     </div>
                 `).join('');
             }
-            setInterval(update, 3000); window.onload = update;
+            setInterval(updateMarket, 3000);
         </script>
     </head>
     <body>
         <div class="radio-unit">
             <img id="main-art" class="album-art" src="https://via.placeholder.com/100?text=AITIFY" alt="Art">
             <div>
-                <span style="color:var(--bloomberg-green); font-size:9px; letter-spacing:3px;">ACTIVE BROKER: ${activeBroker}</span><br>
-                <b id="current-song" style="font-size:1.8em; color:#fff;">SELECT ASSET</b><br>
+                <span style="color:var(--bloomberg-green); font-size:9px; letter-spacing:3px;">ACTIVE BROKER: <span id="broker-display"></span></span><br>
+                <b id="current-song" style="font-size:1.8em; color:#fff;">SELECT ASSET TO BROADCAST</b><br>
                 <audio id="main-player" controls style="height:30px; filter: invert(100%); opacity:0.8;"></audio>
             </div>
-            <button class="trade-btn" style="height:50px; font-size:14px;" onclick="alert('Trade Sent')">TRADE NOW</button>
+            <button class="trade-btn" style="height:50px; font-size:14px;" onclick="alert('Primary Trade Sent')">TRADE NOW</button>
         </div>
         <div id="floor"></div>
     </body>
     </html>
-    """)
+    ''')
 
 @app.route('/api/data')
 def get_data():
     try:
-        conn = psycopg2.connect(DB_URL)
-        cur = conn.cursor()
+        conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url FROM gsr_artist_roster LIMIT 50;")
         rows = cur.fetchall()
         roster = []
         for r in rows:
             principal = (sum(ord(c) for c in r[0]) % 5) + 1
-            target_roi = random.choice([35, 50, 80, 95]) # MFP (Forecast)
+            target_roi = random.choice([35, 50, 80, 95])
             roster.append({
                 "song": r[0], "principal": principal, "target_roi": target_roi,
-                "current_price": "{:.2f}".format(principal * 1.4),
+                "current_price": "{:.2f}".format(principal * 1.4 + random.uniform(-0.1, 0.1)),
                 "audio": r[1] if r[1] else "", "image": r[2] if r[2] else ""
             })
         cur.close(); conn.close()
