@@ -12,7 +12,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # SECURE NEON CONNECTION
 DB_URL = "postgresql://neondb_owner:npg_49bsxXGdfouV@ep-calm-sun-a4s6bd19-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
-# --- [1] THE MINTING SUITE (ADMIN ONLY) ---
+# --- [1] PRODUCTION ROOM (MINTING STATION) ---
 @app.route('/mint')
 def minting_suite():
     return render_template_string('''
@@ -56,14 +56,11 @@ def minting_suite():
     </html>
     ''')
 
-# --- [2] STOCKING ACTION (NEON INJECTION) ---
+# --- [2] STOCKING ACTION ---
 @app.route('/stock_asset', methods=['POST'])
 def stock_asset():
-    title = request.form.get('title')
-    artist = request.form.get('artist')
-    price = request.form.get('price')
-    audio = request.files['audio']
-    image = request.files['image']
+    title, artist, price = request.form.get('title'), request.form.get('artist'), request.form.get('price')
+    audio, image = request.files['audio'], request.files['image']
     
     a_fn = secure_filename(f"{artist}_{title}.mp3")
     i_fn = secure_filename(f"{artist}_{title}.jpg")
@@ -76,14 +73,14 @@ def stock_asset():
     conn.commit(); cur.close(); conn.close()
     return redirect(url_for('index'))
 
-# --- [3] TRADING FLOOR (TERMINAL) ---
+# --- [3] TRADING FLOOR (MAIN TERMINAL) ---
 @app.route('/')
 def index():
     return render_template_string('''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TERMINAL V19</title>
+        <title>AITIFY | TERMINAL V20</title>
         <style>
             :root { --bloomberg-green: #00ff33; }
             body { background: #010101; color: #e0e0e0; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; }
@@ -96,17 +93,19 @@ def index():
         </style>
         <script>
             async function update() {
-                const res = await fetch('/api/data');
-                const data = await res.json();
-                document.getElementById('floor').innerHTML = data.roster.map(i => `
-                    <div class="row" onclick="play('${i.song}', '${i.audio}', '${i.image}')">
-                        <div style="color:#444;">1001</div>
-                        <div><b>${i.song.toUpperCase()}</b><br><span style="font-size:9px; color:var(--bloomberg-green);">CONTRACT ACTIVE</span></div>
-                        <div style="color:#666; text-align:center;">$${i.principal}</div>
-                        <div class="price">$${i.current_price}</div>
-                        <button class="btn" onclick="event.stopPropagation(); alert('Trade Processed')">TRADE</button>
-                    </div>
-                `).join('');
+                try {
+                    const res = await fetch('/api/data');
+                    const data = await res.json();
+                    document.getElementById('floor').innerHTML = data.roster.map(i => `
+                        <div class="row" onclick="play('${i.song}', '${i.audio}', '${i.image}')">
+                            <div style="color:#444;">1001</div>
+                            <div><b>${i.song.toUpperCase()}</b><br><span style="font-size:9px; color:var(--bloomberg-green);">CONTRACT ACTIVE</span></div>
+                            <div style="color:#666; text-align:center;">$${i.principal}</div>
+                            <div class="price">$${i.current_price}</div>
+                            <button class="btn" onclick="event.stopPropagation(); alert('Trade Processed')">TRADE</button>
+                        </div>
+                    `).join('');
+                } catch(e) { console.error("Floor Load Failed"); }
             }
             function play(s, a, i) {
                 document.getElementById('title').innerText = s;
