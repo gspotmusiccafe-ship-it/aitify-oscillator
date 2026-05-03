@@ -24,7 +24,7 @@ def minting_suite():
             :root { --bloomberg-green: #00ff33; }
             body { background: #010101; color: var(--bloomberg-green); font-family: 'IBM Plex Mono'; padding: 40px; }
             .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .station { border: 1px solid var(--bloomberg-green); padding: 20px; background: #0a0a0a; box-shadow: 0 0 15px rgba(0,255,51,0.1); }
+            .station { border: 1px solid var(--bloomberg-green); padding: 20px; background: #0a0a0a; }
             input, textarea { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; margin-top: 10px; font-family: inherit; }
             .action-btn { background: var(--bloomberg-green); color: #000; border: none; padding: 15px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
             .nav-link { color: var(--bloomberg-green); text-decoration: none; font-size: 10px; margin-bottom: 20px; display: block; letter-spacing: 2px; }
@@ -32,13 +32,13 @@ def minting_suite():
     </head>
     <body>
         <a href="/" class="nav-link"><< BACK TO TRADING FLOOR</a>
-        <h1 style="letter-spacing: 5px;">AITIFY PRODUCTION ROOM</h1>
+        <h1>PRODUCTION ROOM</h1>
         <div class="grid">
             <div class="station">
                 <h3>[1] GENERATION ENGINE</h3>
                 <input type="text" placeholder="ENTER LYRIC OR IMAGE PROMPT">
-                <button class="action-btn" onclick="alert('Minting Assets...')">GENERATE</button>
-                <textarea rows="4" placeholder="AI OUTPUT WILL APPEAR HERE"></textarea>
+                <button class="action-btn" onclick="alert('Minting...')">GENERATE</button>
+                <textarea rows="4" placeholder="AI OUTPUT..."></textarea>
             </div>
             <div class="station">
                 <h3>[2] STOCK THE EXCHANGE</h3>
@@ -56,56 +56,62 @@ def minting_suite():
     </html>
     ''')
 
-# --- [2] STOCKING ACTION ---
+# --- [2] STOCKING ACTION (WITH ERROR CATCHING) ---
 @app.route('/stock_asset', methods=['POST'])
 def stock_asset():
-    title, artist, price = request.form.get('title'), request.form.get('artist'), request.form.get('price')
-    audio, image = request.files['audio'], request.files['image']
-    
-    a_fn = secure_filename(f"{artist}_{title}.mp3")
-    i_fn = secure_filename(f"{artist}_{title}.jpg")
-    audio.save(os.path.join(app.config['UPLOAD_FOLDER'], a_fn))
-    image.save(os.path.join(app.config['UPLOAD_FOLDER'], i_fn))
-    
-    conn = psycopg2.connect(DB_URL); cur = conn.cursor()
-    cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)",
-                (f"{artist} - {title}", f"/static/uploads/{a_fn}", f"/static/uploads/{i_fn}", price))
-    conn.commit(); cur.close(); conn.close()
-    return redirect(url_for('index'))
+    try:
+        title = request.form.get('title')
+        artist = request.form.get('artist')
+        price = request.form.get('price')
+        audio = request.files['audio']
+        image = request.files['image']
+        
+        a_fn = secure_filename(f"{artist}_{title}.mp3")
+        i_fn = secure_filename(f"{artist}_{title}.jpg")
+        audio.save(os.path.join(app.config['UPLOAD_FOLDER'], a_fn))
+        image.save(os.path.join(app.config['UPLOAD_FOLDER'], i_fn))
+        
+        conn = psycopg2.connect(DB_URL); cur = conn.cursor()
+        # Adjusted columns to match your 'gsr_artist_roster' setup
+        cur.execute("""
+            INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) 
+            VALUES (%s, %s, %s, %s)
+        """, (f"{artist} - {title}", f"/static/uploads/{a_fn}", f"/static/uploads/{i_fn}", price))
+        conn.commit(); cur.close(); conn.close()
+        return redirect(url_for('index'))
+    except Exception as e:
+        return f"DATABASE ERROR: {str(e)}" # This helps us debug the 500 error
 
-# --- [3] TRADING FLOOR (MAIN TERMINAL) ---
+# --- [3] TRADING FLOOR ---
 @app.route('/')
 def index():
     return render_template_string('''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TERMINAL V20</title>
+        <title>AITIFY | TERMINAL V21</title>
         <style>
             :root { --bloomberg-green: #00ff33; }
-            body { background: #010101; color: #e0e0e0; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; }
+            body { background: #010101; color: #e0e0e0; font-family: 'IBM Plex Mono'; margin: 0; overflow: hidden; }
             .header { background: #0a0a0a; border-bottom: 1px solid var(--bloomberg-green); padding: 20px 40px; display: grid; grid-template-columns: 120px 1fr 220px; align-items: center; gap: 30px; }
-            .art-box { width: 100px; height: 100px; border: 1px solid var(--bloomberg-green); background: #111; object-fit: cover; }
             #floor { overflow-y: auto; height: calc(100vh - 145px); }
             .row { display: grid; grid-template-columns: 70px 2fr 100px 150px 120px; padding: 15px 40px; border-bottom: 1px solid #222; cursor: pointer; }
-            .price { font-size: 2em; color: var(--bloomberg-green); font-weight: 900; letter-spacing: -2px; }
+            .price { font-size: 2.2em; color: var(--bloomberg-green); font-weight: 900; letter-spacing: -2px; }
             .btn { background: var(--bloomberg-green); color: #000; border: none; padding: 10px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; }
         </style>
         <script>
             async function update() {
-                try {
-                    const res = await fetch('/api/data');
-                    const data = await res.json();
-                    document.getElementById('floor').innerHTML = data.roster.map(i => `
-                        <div class="row" onclick="play('${i.song}', '${i.audio}', '${i.image}')">
-                            <div style="color:#444;">1001</div>
-                            <div><b>${i.song.toUpperCase()}</b><br><span style="font-size:9px; color:var(--bloomberg-green);">CONTRACT ACTIVE</span></div>
-                            <div style="color:#666; text-align:center;">$${i.principal}</div>
-                            <div class="price">$${i.current_price}</div>
-                            <button class="btn" onclick="event.stopPropagation(); alert('Trade Processed')">TRADE</button>
-                        </div>
-                    `).join('');
-                } catch(e) { console.error("Floor Load Failed"); }
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                document.getElementById('floor').innerHTML = data.roster.map(i => `
+                    <div class="row" onclick="play('${i.song}', '${i.audio}', '${i.image}')">
+                        <div style="color:#444;">ID</div>
+                        <div><b>${i.song.toUpperCase()}</b><br><span style="font-size:9px; color:var(--bloomberg-green);">CONTRACT ACTIVE</span></div>
+                        <div style="color:#666;">$${i.principal}</div>
+                        <div class="price">$${i.current_price}</div>
+                        <button class="btn" onclick="event.stopPropagation(); alert('Trade Logged')">TRADE</button>
+                    </div>
+                `).join('');
             }
             function play(s, a, i) {
                 document.getElementById('title').innerText = s;
@@ -117,10 +123,10 @@ def index():
     </head>
     <body>
         <div class="header">
-            <img id="art" class="art-box" src="https://via.placeholder.com/100?text=AITIFY">
+            <img id="art" style="width:100px; height:100px; border:1px solid var(--bloomberg-green);" src="">
             <div>
-                <b id="title" style="font-size:1.5em; color:#fff;">SELECT ASSET TO BROADCAST</b><br>
-                <audio id="player" controls style="filter: invert(100%); height: 30px; margin-top: 10px; opacity: 0.8;"></audio>
+                <b id="title">SELECT ASSET</b><br>
+                <audio id="player" controls style="filter: invert(100%); height: 30px; margin-top: 10px;"></audio>
             </div>
             <button class="btn" style="height: 60px;" onclick="location.href='/mint'">OPEN PRODUCTION ROOM</button>
         </div>
@@ -134,10 +140,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster LIMIT 50;")
-        roster = []
-        for r in cur.fetchall():
-            p = float(r[3]) if r[3] else 1.00
-            roster.append({"song": r[0], "audio": r[1], "image": r[2], "principal": p, "current_price": "{:.2f}".format(p * 1.4 + random.uniform(-0.05, 0.05))})
+        roster = [{"song": r[0], "audio": r[1], "image": r[2], "principal": r[3], "current_price": "{:.2f}".format(float(r[3])*1.4)} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
