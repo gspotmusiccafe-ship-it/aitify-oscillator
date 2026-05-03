@@ -10,7 +10,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | BROADCAST TERMINAL V13</title>
+        <title>AITIFY | BROADCAST TERMINAL V14</title>
         <style>
             :root { --bloomberg-green: #00ff33; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); }
             body { background: #010101; color: #e0e0e0; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; }
@@ -29,25 +29,26 @@ def index():
             }
 
             #floor { overflow-y: auto; height: calc(100vh - 145px); }
-            .asset-row { display: grid; grid-template-columns: 70px 2fr 130px 100px 160px 140px; align-items: center; padding: 15px 40px; border-bottom: 1px solid var(--glass-border); background: var(--glass); }
+            .asset-row { display: grid; grid-template-columns: 70px 2fr 130px 100px 160px 140px; align-items: center; padding: 15px 40px; border-bottom: 1px solid var(--glass-border); background: var(--glass); cursor: pointer; transition: 0.2s; }
+            .asset-row:hover { background: rgba(255,255,255,0.08); }
             .price-ticker { font-size: 2.2em; font-weight: 900; color: var(--bloomberg-green); letter-spacing: -2px; }
-
-            /* GLASS CONTROLS */
-            .glass-input { background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--bloomberg-green); padding: 5px; font-family: inherit; font-size: 10px; width: 100%; margin-top: 5px; }
         </style>
         <script>
-            function updatePlayer(songName, imgUrl) {
+            function loadAsset(songName, audioUrl, imgUrl) {
                 document.getElementById('current-song').innerText = songName;
-                document.getElementById('main-art').src = imgUrl;
+                document.getElementById('main-art').src = imgUrl || 'https://via.placeholder.com/100?text=AITIFY';
+                const player = document.getElementById('main-player');
+                player.src = audioUrl;
+                player.play();
             }
 
             async function updateMarket() {
                 const res = await fetch('/api/data');
                 const data = await res.json();
                 document.getElementById('floor').innerHTML = data.roster.map((i, idx) => `
-                    <div class="asset-row">
+                    <div class="asset-row" onclick="loadAsset('${i.song}', '${i.audio}', '${i.image}')">
                         <div style="color:#444;">${1001+idx}</div>
-                        <div><b style="color:#fff; font-size:1.1em;">${i.song.toUpperCase()}</b><br><span style="color:var(--bloomberg-green); font-size:8px;">4:00M CONTRACT</span></div>
+                        <div><b style="color:#fff; font-size:1.1em;">${i.song.toUpperCase()}</b><br><span style="color:var(--bloomberg-green); font-size:8px;">CONTRACT DURATION: 4:00M</span></div>
                         <div><span style="border:1px solid var(--bloomberg-green); color:var(--bloomberg-green); padding:2px 5px; font-size:9px;">${i.target_roi}% MBBO</span></div>
                         <div style="color:#666; text-align:center;">$${i.principal}.00</div>
                         <div class="price-ticker">$${i.current_price}</div>
@@ -55,27 +56,23 @@ def index():
                     </div>
                 `).join('');
             }
-            setInterval(updateMarket, 2000); window.onload = updateMarket;
+            setInterval(updateMarket, 2500); window.onload = updateMarket;
         </script>
     </head>
     <body>
         <div class="radio-unit">
-            <img id="main-art" class="album-art" src="https://via.placeholder.com/100?text=AITIFY+IMG" alt="Art">
+            <img id="main-art" class="album-art" src="https://via.placeholder.com/100?text=AITIFY" alt="Art">
             <div class="now-playing-info">
                 <span style="color:var(--bloomberg-green); font-size:9px; letter-spacing:3px;">BROADCASTING LIVE: 97.7 THE FLAME</span>
                 <b id="current-song" style="font-size:1.8em; letter-spacing:1px; color:#fff;">SELECT ASSET TO BROADCAST</b>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <audio controls style="height:30px; filter: invert(100%); opacity:0.8;">
+                    <audio id="main-player" controls style="height:30px; filter: invert(100%); opacity:0.8;">
                         <source src="" type="audio/mpeg">
                     </audio>
                     <span style="color:#444; font-size:10px;">| MBBO LIQUIDITY: $522/1K</span>
                 </div>
             </div>
-            <button class="trade-btn-main" onclick="alert('Trade Order Sent to Queue')">TRADE NOW</button>
-        </div>
-
-        <div class="market-grid-header" style="display: grid; grid-template-columns: 70px 2fr 130px 100px 160px 140px; padding: 10px 40px; background: rgba(0, 255, 51, 0.05); color: var(--bloomberg-green); font-size: 9px; border-bottom: 1px solid var(--glass-border);">
-            <div>INDEX</div><div>ASSET CONTRACT</div><div>MARKET OFFER</div><div>PRINCIPAL</div><div>CURRENT PRICE</div><div>EXECUTION</div>
+            <button class="trade-btn-main" onclick="alert('Trade Order Sent to Settlement Queue')">TRADE NOW</button>
         </div>
         <div id="floor"></div>
     </body>
@@ -85,15 +82,21 @@ def index():
 @app.route('/api/data')
 def get_data():
     conn = psycopg2.connect(DB_URL); cur = conn.cursor()
-    cur.execute("SELECT song_title FROM gsr_artist_roster LIMIT 50;")
+    # Pulling direct Asset Title, Principal, and Media URLs
+    cur.execute("SELECT song_title, audio_url, image_url FROM gsr_artist_roster LIMIT 50;")
     roster = []
     for r in cur.fetchall():
         song_name = r[0]
+        # MBBO Math: principal $1-$5, settles up to 100% ROI
         principal = (sum(ord(char) for char in song_name) % 5) + 1
         target_roi = random.choice([35, 50, 80, 100])
         final_price = principal * (1 + (target_roi / 100))
         current_price = "{:.2f}".format(max(principal, final_price + random.uniform(-0.1, 0.1)))
-        roster.append({"song": song_name, "principal": principal, "target_roi": target_roi, "current_price": current_price})
+        
+        roster.append({
+            "song": song_name, "principal": principal, "target_roi": target_roi, 
+            "current_price": current_price, "audio": r[1], "image": r[2]
+        })
     cur.close(); conn.close()
     return jsonify({"roster": roster})
 
