@@ -10,43 +10,43 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TRADING TERMINAL</title>
+        <title>AITIFY | TERMINAL V34</title>
         <style>
-            :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --bg: #050505; --panel: #0a0a0a; }
+            :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
             
-            /* COMMAND CENTER LAYOUT */
-            .terminal-container { display: grid; grid-template-columns: 450px 1fr; height: 100vh; gap: 2px; background: #1a1a1a; }
+            /* TRADING HUB LAYOUT */
+            .terminal-container { display: grid; grid-template-columns: 550px 1fr; height: 100vh; gap: 1px; background: #111; }
             
-            /* LEFT PANEL: BROADCAST MONITOR */
-            .broadcast-monitor { background: #000; padding: 30px; display: flex; flex-direction: column; border-right: 1px solid #222; }
-            #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--green); object-fit: cover; margin-bottom: 20px; box-shadow: 0 0 30px rgba(0,255,51,0.1); }
-            .on-air-status { color: var(--green); font-size: 10px; letter-spacing: 4px; margin-bottom: 5px; }
-            #now-playing { font-size: 2em; line-height: 1.1; margin-bottom: 20px; text-transform: uppercase; }
+            /* MASTER MONITOR (LEFT) */
+            .monitor { background: #000; padding: 25px; display: flex; flex-direction: column; position: relative; border-right: 1px solid #222; }
+            #cover { width: 100%; aspect-ratio: 16/9; border: 1px solid #222; object-fit: cover; margin-bottom: 15px; filter: contrast(1.2) brightness(0.8); }
             
-            /* RIGHT PANEL: TRADING FLOOR */
-            .trading-floor { background: #050505; overflow-y: auto; padding: 20px; }
+            /* GAINS & LOSSES OSCILLATOR */
+            .oscillator-vault { flex-grow: 1; background: #050505; border: 1px solid #111; position: relative; overflow: hidden; margin-bottom: 20px; }
+            canvas#master-pulse { width: 100%; height: 100%; }
+            .vibration-data { position: absolute; top: 10px; right: 10px; text-align: right; font-weight: bold; }
+            .gain { color: var(--green); } .loss { color: var(--red); }
+            
+            /* PACECARDS (RIGHT) */
+            .trading-floor { background: #000; overflow-y: auto; padding: 20px; }
             .pace-card { 
-                background: var(--panel); border: 1px solid #1a1a1a; padding: 15px; margin-bottom: 10px;
-                display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 20px;
+                background: #080808; border-bottom: 1px solid #1a1a1a; padding: 20px; 
+                display: grid; grid-template-columns: 1fr 180px; align-items: center; margin-bottom: 5px;
             }
-            .ticker { font-size: 2.5em; font-weight: 900; color: var(--green); letter-spacing: -3px; }
+            .ticker-price { font-size: 2.8em; font-weight: 900; color: var(--green); letter-spacing: -3px; }
             
-            /* BLOOMBERG BUTTONS */
-            .mbbo-dock { display: flex; flex-direction: column; gap: 5px; }
             .mbbo-btn { 
-                padding: 10px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
-                cursor: pointer; text-transform: uppercase; font-size: 9px; border-left: 4px solid #444; text-align: left;
+                padding: 12px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
+                cursor: pointer; text-transform: uppercase; font-size: 10px; border-left: 5px solid #444; margin-bottom: 4px;
             }
-            .mbbo-btn.static:hover { border-left-color: var(--green); background: #111; }
-            .mbbo-btn.forecast:hover { border-left-color: var(--blue); background: #111; }
-            .mbbo-btn.currency:hover { border-left-color: var(--gold); background: #111; }
-
-            /* MASTER AUDIO UNIT */
-            .audio-unit { margin-top: auto; border-top: 1px solid #222; padding-top: 20px; }
-            audio { width: 100%; height: 35px; filter: invert(1); }
+            .mbbo-btn:hover { background: #111; border-left-color: #fff; }
+            
+            audio { width: 100%; height: 35px; filter: invert(1) hue-rotate(90deg); margin-top: 10px; }
         </style>
         <script>
+            let pulseData = [];
+            
             async function sync() {
                 const res = await fetch('/api/data'); const data = await res.json();
                 if (data.roster) {
@@ -54,14 +54,13 @@ def index():
                     floor.innerHTML = data.roster.map((i, idx) => `
                         <div class="pace-card">
                             <div>
-                                <div style="font-size:9px; color:#444;">ASSET_ID: 100${idx}</div>
-                                <div style="font-size:1.1em; color:#ddd;">${i.song}</div>
-                                <div class="ticker" id="price-${idx}">$${i.current_price}</div>
+                                <div style="font-size:9px; color:#444;">ASSET_STATION: 97.7</div>
+                                <div style="color:#aaa;">${i.song}</div>
+                                <div class="ticker-price">$${i.current_price}</div>
                             </div>
-                            <div class="mbbo-dock">
-                                <button class="mbbo-btn static" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
-                                <button class="mbbo-btn forecast" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'TARGET')">TARGET MBBO</button>
-                                <button class="mbbo-btn currency" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">FOREX MBBO</button>
+                            <div style="display:flex; flex-direction:column;">
+                                <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
+                                <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'FOREX')">CURRENCY MBBO</button>
                             </div>
                         </div> `).join('');
                 }
@@ -70,41 +69,57 @@ def index():
             function ignite(audio, img, title, type) {
                 const player = document.getElementById('master-player');
                 document.getElementById('now-playing').innerText = title;
-                document.getElementById('mode').innerText = type + " EXECUTION ACTIVE";
                 document.getElementById('cover').src = img;
+                player.src = audio; player.load();
                 
-                // AUDIO SYNC
-                player.src = audio;
-                player.load();
-                
-                // BYPASS BROWSER SILENCE
                 const playPromise = player.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(() => {
-                        console.log("Waiting for user trigger...");
-                        document.getElementById('mode').innerText = "PORTAL STANDBY - CLICK PLAY TO IGNITE";
-                    });
+                    playPromise.catch(() => { document.getElementById('now-playing').innerText = "CLICK PLAY TO IGNITE FEED"; });
                 }
+                startOscillator();
             }
+
+            function startOscillator() {
+                const canvas = document.getElementById('master-pulse');
+                const ctx = canvas.getContext('2d');
+                function draw() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.strokeStyle = '#00ff33'; ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    pulseData.push(Math.random() * 50 + 25);
+                    if(pulseData.length > 100) pulseData.shift();
+                    
+                    pulseData.forEach((val, i) => {
+                        ctx.lineTo(i * (canvas.width/100), canvas.height - val);
+                    });
+                    ctx.stroke();
+                    
+                    const roi = (Math.random() * 2.5).toFixed(2);
+                    document.getElementById('roi-display').innerHTML = `<span class="gain">+${roi}% VELOCITY</span>`;
+                    requestAnimationFrame(draw);
+                }
+                draw();
+            }
+
             setInterval(sync, 4000); window.onload = sync;
         </script>
     </head>
     <body>
         <div class="terminal-container">
-            <div class="broadcast-monitor">
-                <div class="on-air-status">97.7 THE FLAME // LIVE</div>
-                <img id="cover" src="https://via.placeholder.com/400?text=AITIFY+TERMINAL">
-                <div id="mode" style="font-size:10px; color:var(--gold); margin-bottom:5px;">AWAITING PORTAL ENTRY...</div>
-                <div id="now-playing">STANDBY FOR BROADCAST</div>
+            <div class="monitor">
+                <div style="font-size:10px; color:var(--green); letter-spacing:5px; margin-bottom:10px;">97.7 THE FLAME // SATELLITE MONITOR</div>
+                <img id="cover" src="https://via.placeholder.com/600x400?text=AITIFY+WAITING+FOR+FEED">
                 
-                <div class="audio-unit">
-                    <audio id="master-player" controls crossorigin="anonymous"></audio>
-                    <p style="font-size:9px; color:#444; margin-top:10px;">ENCRYPTED SATELLITE FEED // FIREBASE STORAGE CLOUD</p>
+                <div class="oscillator-vault">
+                    <div class="vibration-data" id="roi-display"></div>
+                    <canvas id="master-pulse"></canvas>
                 </div>
+
+                <div id="now-playing" style="font-size:1.8em; text-transform:uppercase; margin-bottom:10px;">STANDBY</div>
+                <audio id="master-player" controls crossorigin="anonymous"></audio>
             </div>
             
-            <div class="trading-floor" id="floor">
-                </div>
+            <div class="trading-floor" id="floor"></div>
         </div>
     </body>
     </html>
@@ -115,7 +130,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "principal": "{:.2f}".format(float(r[3])), "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.08, 0.08))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.08, 0.08))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
