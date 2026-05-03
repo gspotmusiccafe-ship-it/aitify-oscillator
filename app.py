@@ -1,96 +1,48 @@
-from flask import Flask, render_template_string, jsonify
-import psycopg2, random, os
-
-app = Flask(__name__)
-DB_URL = "postgresql://neondb_owner:npg_49bsxXGdfouV@ep-calm-sun-a4s6bd19-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
-
-@app.route('/')
-def index():
+# --- THE MINTING SUITE (ADMIN ONLY) ---
+@app.route('/mint')
+def minting_suite():
     return render_template_string('''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TERMINAL V16</title>
+        <title>AITIFY | MINTING SUITE</title>
         <style>
-            :root { --bloomberg-green: #00ff33; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); }
-            body { background: #010101; color: #e0e0e0; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; }
-            .radio-unit { background: #0a0a0a; border-bottom: 1px solid var(--bloomberg-green); padding: 20px 40px; display: grid; grid-template-columns: 120px 1fr 200px; align-items: center; gap: 30px; }
-            .album-art { width: 100px; height: 100px; border: 1px solid var(--bloomberg-green); background: #111; object-fit: cover; }
-            #floor { overflow-y: auto; height: calc(100vh - 145px); }
-            .asset-row { display: grid; grid-template-columns: 70px 2fr 130px 100px 160px 140px; align-items: center; padding: 15px 40px; border-bottom: 1px solid var(--glass-border); cursor: pointer; }
-            .price-ticker { font-size: 2.2em; font-weight: 900; color: var(--bloomberg-green); letter-spacing: -2px; }
-            .trade-btn { background: var(--bloomberg-green); color: #000; border: none; padding: 10px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; }
+            :root { --bloomberg-green: #00ff33; --glass: rgba(0, 255, 51, 0.05); }
+            body { background: #010101; color: var(--bloomberg-green); font-family: 'IBM Plex Mono'; padding: 40px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .station { border: 1px solid var(--bloomberg-green); padding: 20px; background: #0a0a0a; }
+            textarea, input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; margin-top: 10px; }
+            .action-btn { background: var(--bloomberg-green); color: #000; border: none; padding: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
         </style>
-        <script>
-            const urlParams = new URLSearchParams(window.location.search);
-            const activeBroker = urlParams.get('broker') || 'HOUSE';
-
-            window.onload = function() {
-                document.getElementById('broker-display').innerText = activeBroker;
-                updateMarket();
-            };
-
-            function loadAsset(song, audio, img) {
-                document.getElementById('current-song').innerText = song;
-                document.getElementById('main-art').src = img || 'https://via.placeholder.com/100?text=AITIFY';
-                const p = document.getElementById('main-player');
-                p.src = audio; 
-                p.play().catch(e => console.log("User must interact first"));
-            }
-
-            async function updateMarket() {
-                const res = await fetch('/api/data');
-                const data = await res.json();
-                if (data.error) return;
-                document.getElementById('floor').innerHTML = data.roster.map((i, idx) => `
-                    <div class="asset-row" onclick="loadAsset('${i.song}', '${i.audio}', '${i.image}')">
-                        <div style="color:#444;">${1001+idx}</div>
-                        <div><b style="color:#fff;">${i.song.toUpperCase()}</b><br><span style="color:var(--bloomberg-green); font-size:8px;">CONTRACT ACTIVE</span></div>
-                        <div style="color:var(--bloomberg-green); font-size:9px; border:1px solid; text-align:center;">${i.target_roi}% MBBO</div>
-                        <div style="color:#666; text-align:center;">$${i.principal}.00</div>
-                        <div class="price-ticker">$${i.current_price}</div>
-                        <div style="padding-left:20px;"><button class="trade-btn" onclick="event.stopPropagation(); alert('Trade Logged for Broker: ' + activeBroker)">TRADE NOW</button></div>
-                    </div>
-                `).join('');
-            }
-            setInterval(updateMarket, 3000);
-        </script>
     </head>
     <body>
-        <div class="radio-unit">
-            <img id="main-art" class="album-art" src="https://via.placeholder.com/100?text=AITIFY" alt="Art">
-            <div>
-                <span style="color:var(--bloomberg-green); font-size:9px; letter-spacing:3px;">ACTIVE BROKER: <span id="broker-display"></span></span><br>
-                <b id="current-song" style="font-size:1.8em; color:#fff;">SELECT ASSET TO BROADCAST</b><br>
-                <audio id="main-player" controls style="height:30px; filter: invert(100%); opacity:0.8;"></audio>
+        <h1>AITIFY PRODUCTION ROOM</h1>
+        <div class="grid">
+            <div class="station">
+                <h3>[1] LYRIC GENERATOR</h3>
+                <input type="text" id="prompt" placeholder="Enter Vibe (e.g. Luxury Trap, 90s R&B)">
+                <button class="action-btn" onclick="alert('Generating Lyrics...')">GENERATE TEXT</button>
+                <textarea rows="5" placeholder="Lyrics will appear here..."></textarea>
             </div>
-            <button class="trade-btn" style="height:50px; font-size:14px;" onclick="alert('Trade Sent')">TRADE NOW</button>
+            
+            <div class="station">
+                <h3>[2] IMAGE GENERATOR</h3>
+                <input type="text" placeholder="Visual Prompt">
+                <button class="action-btn" onclick="alert('Rendering Art...')">MINT COVER ART</button>
+                <div style="height:100px; background:#111; margin-top:10px; border:1px dashed #333; display:flex; align-items:center; justify-content:center; font-size:10px;">PREVIEW BOX</div>
+            </div>
+
+            <div class="station" style="grid-column: span 2;">
+                <h3>[3] FINAL MINT & DEPLOY</h3>
+                <form action="/stock_asset" method="post" enctype="multipart/form-data" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="text" name="title" placeholder="ASSET TITLE" required>
+                    <input type="number" step="0.01" name="price" placeholder="UNIT PRICE ($1-$5)" required>
+                    <input type="file" name="audio" accept="audio/*" required>
+                    <input type="file" name="image" accept="image/*" required>
+                    <button type="submit" class="action-btn" style="grid-column: span 2; height: 60px; font-size: 1.2em;">COMMIT TO EXCHANGE</button>
+                </form>
+            </div>
         </div>
-        <div id="floor"></div>
     </body>
     </html>
     ''')
-
-@app.route('/api/data')
-def get_data():
-    try:
-        conn = psycopg2.connect(DB_URL); cur = conn.cursor()
-        # Fetching directly from your Artist Roster table
-        cur.execute("SELECT song_title, audio_url, image_url FROM gsr_artist_roster LIMIT 50;")
-        rows = cur.fetchall()
-        roster = []
-        for r in rows:
-            principal = (sum(ord(c) for c in r[0]) % 5) + 1
-            target_roi = random.choice([35, 50, 80, 95])
-            roster.append({
-                "song": r[0], "principal": principal, "target_roi": target_roi,
-                "current_price": "{:.2f}".format(principal * 1.4 + random.uniform(-0.1, 0.1)),
-                "audio": r[1] if r[1] else "", "image": r[2] if r[2] else ""
-            })
-        cur.close(); conn.close()
-        return jsonify({"roster": roster})
-    except Exception as e:
-        return jsonify({"error": str(e), "roster": []})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
