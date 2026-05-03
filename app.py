@@ -10,45 +10,31 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | BIG BOY TERMINAL V35</title>
+        <title>AITIFY | BIG BOY TERMINAL V36</title>
         <style>
             :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
-            
-            .terminal-container { display: grid; grid-template-columns: 400px 1fr; height: 100vh; gap: 2px; background: #111; }
-            
-            /* MASTER BROADCAST (LEFT) */
+            .terminal-container { display: grid; grid-template-columns: 450px 1fr; height: 100vh; gap: 2px; background: #111; }
             .monitor { background: #000; padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #222; }
-            #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--green); object-fit: cover; margin-bottom: 15px; box-shadow: 0 0 20px rgba(0,255,51,0.2); }
-            
-            /* THE TRADING FLOOR (RIGHT) */
+            #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--green); object-fit: cover; margin-bottom: 15px; }
             .trading-floor { background: #000; overflow-y: auto; padding: 20px; }
             .pace-card { 
                 background: #080808; border: 1px solid #1a1a1a; padding: 25px; 
-                display: grid; grid-template-columns: 1fr 220px; gap: 30px; margin-bottom: 15px; min-height: 350px;
+                display: grid; grid-template-columns: 1fr 220px; gap: 30px; margin-bottom: 15px; min-height: 400px;
             }
-            
-            /* FILLING THE VOID: OSCILLATOR */
-            .ticker-section { display: flex; flex-direction: column; justify-content: space-between; }
-            .ticker-price { font-size: 4.5em; font-weight: 900; color: var(--green); letter-spacing: -5px; line-height: 1; }
-            .void-filler-graph { flex-grow: 1; background: #050505; border: 1px solid #111; margin-top: 20px; position: relative; }
+            .ticker-section { display: flex; flex-direction: column; }
+            .ticker-price { font-size: 5.5em; font-weight: 900; color: var(--green); letter-spacing: -6px; line-height: 0.8; margin-bottom: 15px; }
+            .void-filler-graph { flex-grow: 1; background: #000; border: 1px solid #111; position: relative; min-height: 200px; }
+            .velocity-tag { position: absolute; top: 15px; right: 20px; font-weight: bold; font-size: 1.8em; z-index: 10; font-family: 'Courier New'; }
             canvas { width: 100%; height: 100%; }
-
-            /* BLOOMBERG BUTTON DOCK */
             .mbbo-dock { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
-            .mbbo-btn { 
-                padding: 18px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
-                cursor: pointer; text-transform: uppercase; font-size: 11px; border-left: 6px solid #444;
-            }
+            .mbbo-btn { padding: 20px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff; cursor: pointer; text-transform: uppercase; font-size: 12px; border-left: 8px solid #444; }
             .mbbo-btn.static:hover { border-left-color: var(--green); background: #0a110a; }
-            .mbbo-btn.forecast:hover { border-left-color: var(--blue); background: #0a0e11; }
             .mbbo-btn.currency:hover { border-left-color: var(--gold); background: #110e0a; }
-            
-            audio { width: 100%; height: 35px; filter: invert(1); margin-top: auto; }
+            audio { width: 100%; height: 45px; filter: invert(1); margin-top: auto; }
         </style>
         <script>
             let charts = {};
-
             async function sync() {
                 const res = await fetch('/api/data'); const data = await res.json();
                 if (data.roster) {
@@ -57,62 +43,68 @@ def index():
                         floor.innerHTML = data.roster.map((i, idx) => `
                             <div class="pace-card">
                                 <div class="ticker-section">
-                                    <div style="font-size:10px; color:var(--green); letter-spacing:3px;">ASSET_ID: 100${idx} // ${i.song}</div>
+                                    <div style="font-size:10px; color:var(--green); letter-spacing:3px;">SATELLITE FEED // ${i.song}</div>
                                     <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
-                                    <div class="void-filler-graph"><canvas id="canvas-${idx}"></canvas></div>
+                                    <div class="void-filler-graph">
+                                        <div id="vel-${idx}" class="velocity-tag">--</div>
+                                        <canvas id="canvas-${idx}"></canvas>
+                                    </div>
                                 </div>
                                 <div class="mbbo-dock">
                                     <button class="mbbo-btn static" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
-                                    <button class="mbbo-btn forecast" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'TARGET')">TARGET MBBO</button>
-                                    <button class="mbbo-btn currency" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">FOREX MBBO</button>
+                                    <button class="mbbo-btn currency" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'FOREX')">CURRENCY MBBO</button>
                                 </div>
                             </div> `).join('');
                     }
                     data.roster.forEach((i, idx) => updatePace(idx, i.current_price));
                 }
             }
-
             function updatePace(idx, price) {
                 const pEl = document.getElementById(`price-${idx}`);
-                if (pEl) pEl.innerText = `$${price}`;
-                
+                const vEl = document.getElementById(`vel-${idx}`);
                 const canvas = document.getElementById(`canvas-${idx}`);
-                if (!canvas) return;
+                if (!pEl || !vEl || !canvas) return;
+                
                 const ctx = canvas.getContext('2d');
                 if (!charts[idx]) charts[idx] = [];
                 
                 let lastP = charts[idx][charts[idx].length - 1] || price;
+                let diff = (parseFloat(price) - parseFloat(lastP)).toFixed(2);
                 charts[idx].push(parseFloat(price));
-                if (charts[idx].length > 60) charts[idx].shift();
+                if (charts[idx].length > 100) charts[idx].shift();
+
+                pEl.innerText = `$${price}`;
+                pEl.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+                
+                vEl.innerText = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff);
+                vEl.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
 
                 ctx.clearRect(0,0, canvas.width, canvas.height);
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = parseFloat(price) >= parseFloat(lastP) ? '#00ff33' : '#ff3300'; // RED FOR LOSSES
-                
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = diff >= 0 ? '#00ff33' : '#ff3300';
                 ctx.beginPath();
-                const step = canvas.width / 60;
+                const step = canvas.width / 100;
                 charts[idx].forEach((p, i) => {
-                    const y = canvas.height - ((p - (price-1)) * 50);
+                    const y = canvas.height - ((p - (price-0.3)) * 300);
                     ctx.lineTo(i * step, y);
                 });
                 ctx.stroke();
             }
-
             function ignite(audio, img, title, type) {
                 const player = document.getElementById('master-player');
                 document.getElementById('now-playing').innerText = title;
                 document.getElementById('cover').src = img;
-                player.src = audio; player.load();
-                player.play().catch(() => { alert("IGNITION DELAY: Tap the Play button below."); });
+                player.src = audio; 
+                player.load();
+                player.play().catch(e => console.log("Ignition failed, checking stream..."));
             }
-
-            setInterval(sync, 3000); window.onload = sync;
+            setInterval(sync, 2000); window.onload = sync;
         </script>
     </head>
     <body>
         <div class="terminal-container">
             <div class="monitor">
-                <img id="cover" src="https://via.placeholder.com/400?text=AITIFY+TERMINAL">
+                <img id="cover" src="https://via.placeholder.com/400?text=AITIFY">
                 <div id="now-playing" style="font-size:1.4em; text-transform:uppercase; margin-top:10px; color:#aaa;">STANDBY</div>
                 <audio id="master-player" controls crossorigin="anonymous"></audio>
             </div>
@@ -127,7 +119,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.15, 0.15))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.30, 0.30))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
