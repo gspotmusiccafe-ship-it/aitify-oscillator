@@ -10,96 +10,112 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TRADING PORTAL</title>
+        <title>AITIFY | TERMINAL</title>
         <style>
-            :root { --green: #00ff33; --blue: #0088ff; --gold: #ffcc00; --bg: #050505; }
-            body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; }
+            :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --bg: #020202; }
+            body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow-x: hidden; }
             
-            /* TOP BROADCAST UNIT */
             .master-unit { 
-                background: #000; border-bottom: 3px solid var(--green); padding: 20px 40px;
-                display: flex; align-items: center; gap: 30px; position: sticky; top: 0; z-index: 100;
+                background: #000; border-bottom: 2px solid var(--green); padding: 15px 30px;
+                display: flex; align-items: center; gap: 20px; position: sticky; top: 0; z-index: 1000;
             }
-            #cover { width: 120px; height: 120px; border: 2px solid var(--green); object-fit: cover; background: #111; }
+            #cover { width: 90px; height: 90px; border: 1px solid var(--green); object-fit: cover; filter: grayscale(50%); }
             
-            /* PACECARD GRID */
-            .portal-grid { 
-                display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); 
-                gap: 20px; padding: 40px; 
-            }
+            .portal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 15px; padding: 30px; }
             .pace-card { 
-                background: #0a0a0a; border: 1px solid #222; padding: 25px; 
-                border-top: 4px solid var(--green); transition: 0.3s;
+                background: #080808; border: 1px solid #1a1a1a; padding: 20px; 
+                display: grid; grid-template-columns: 1fr 180px; gap: 15px;
             }
-            .pace-card:hover { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,51,0.1); }
             
-            .ticker { font-size: 3.5em; font-weight: 900; color: var(--green); letter-spacing: -3px; margin: 10px 0; }
-            .asset-name { font-size: 1.4em; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 10px; }
+            .ticker { font-size: 3.2em; font-weight: 900; color: var(--green); letter-spacing: -4px; line-height: 1; }
+            .asset-name { font-size: 1.1em; color: #aaa; text-transform: uppercase; margin-bottom: 5px; }
             
-            /* BLOOMBERG MBBO BUTTONS */
-            .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+            /* THE BLOOMBERG GRAPH */
+            .spark-container { height: 60px; background: #000; border: 1px solid #111; position: relative; overflow: hidden; margin-top: 10px; }
+            canvas { width: 100%; height: 100%; pointer-events: none; }
+            
+            .mbbo-dock { display: flex; flex-direction: column; gap: 8px; }
             .mbbo-btn { 
-                padding: 15px 5px; font-weight: bold; border: none; cursor: pointer; text-transform: uppercase; font-size: 11px;
-                background: #111; color: #666; border: 1px solid #333;
+                padding: 12px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
+                cursor: pointer; text-transform: uppercase; font-size: 10px; text-align: left;
             }
-            .mbbo-btn.static:hover { background: var(--green); color: #000; border-color: var(--green); }
-            .mbbo-btn.forecast:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
-            .mbbo-btn.currency:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+            .mbbo-btn:hover { border-color: #fff; }
+            .mbbo-btn.static { border-left: 5px solid var(--green); }
+            .mbbo-btn.forecast { border-left: 5px solid var(--blue); }
+            .mbbo-btn.currency { border-left: 5px solid var(--gold); }
             
-            .status-tag { font-size: 10px; color: var(--green); letter-spacing: 2px; }
+            .status-tag { font-size: 9px; color: var(--green); opacity: 0.6; }
         </style>
         <script>
+            let charts = {};
+
             async function sync() {
                 const res = await fetch('/api/data'); const data = await res.json();
                 if (data.roster) {
                     const grid = document.getElementById('grid');
                     grid.innerHTML = data.roster.map((i, idx) => `
                         <div class="pace-card">
-                            <div class="status-tag">PACECARD PORTAL // 100${idx}</div>
-                            <div class="asset-name">${i.song}</div>
-                            <div class="ticker" id="price-${idx}">$${i.current_price}</div>
-                            <div style="color:#666; font-size:12px;">MINT PRICE: $${i.principal}</div>
-                            
+                            <div>
+                                <div class="status-tag">PACECARD // PORTAL_ID_100${idx}</div>
+                                <div class="asset-name">${i.song}</div>
+                                <div class="ticker" id="price-${idx}">$${i.current_price}</div>
+                                <div class="spark-container"><canvas id="chart-${idx}"></canvas></div>
+                            </div>
                             <div class="mbbo-dock">
-                                <button class="mbbo-btn static" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">Static</button>
-                                <button class="mbbo-btn forecast" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'FORECAST')">Forecast</button>
-                                <button class="mbbo-btn currency" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">Currency</button>
+                                <button class="mbbo-btn static" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">MBBO: STATIC</button>
+                                <button class="mbbo-btn forecast" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'FORECAST')">MBBO: TARGET</button>
+                                <button class="mbbo-btn currency" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">MBBO: CURRENCY</button>
                             </div>
                         </div> `).join('');
+                    
+                    data.roster.forEach((i, idx) => updateChart(idx, i.current_price));
                 }
+            }
+
+            function updateChart(idx, price) {
+                const canvas = document.getElementById(`chart-${idx}`);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                if (!charts[idx]) charts[idx] = [];
+                charts[idx].push(parseFloat(price));
+                if (charts[idx].length > 50) charts[idx].shift();
+                
+                ctx.clearRect(0,0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#00ff33'; ctx.lineWidth = 2;
+                ctx.beginPath();
+                const step = canvas.width / 50;
+                charts[idx].forEach((p, i) => {
+                    const y = canvas.height - ((p - 5) * 10); // Simple scaling
+                    ctx.lineTo(i * step, y);
+                });
+                ctx.stroke();
             }
 
             function execute(audio, img, title, type) {
                 const player = document.getElementById('master-player');
-                const cover = document.getElementById('cover');
-                const display = document.getElementById('now-playing');
-                
-                // FORCE SYNC
-                display.innerText = type + " EXECUTION: " + title;
-                cover.src = img;
+                document.getElementById('now-playing').innerText = type + " // " + title;
+                document.getElementById('cover').src = img;
                 player.src = audio;
-                
-                // RE-MAP AND FIRE
                 player.load();
-                var playPromise = player.play();
                 
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log("Playback failed. User must interact.");
-                        alert("PORTAL LOCKED: Click the Play Button on the Radio Bar to finalize the Trade.");
-                    });
-                }
+                // FORCE RESUME AUDIO CONTEXT
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                player.play().catch(e => {
+                    alert("RADIO PORTAL STANDBY: Tap the Play button on the bar to ignite the stream.");
+                });
             }
             setInterval(sync, 4000); window.onload = sync;
         </script>
     </head>
     <body>
         <div class="master-unit">
-            <img id="cover" src="https://via.placeholder.com/120?text=AITIFY">
+            <img id="cover" src="https://via.placeholder.com/100?text=AITIFY">
             <div style="flex-grow: 1;">
-                <span class="status-tag">97.7 THE FLAME // SATELLITE FEED</span><br>
-                <b id="now-playing" style="font-size:2.2em; text-transform:uppercase;">READY FOR BROKER INPUT</b><br>
-                <audio id="master-player" controls crossorigin="anonymous" style="width:100%; height:40px; margin-top:15px;"></audio>
+                <span class="status-tag">97.7 THE FLAME // GLOBAL SATELLITE FEED</span><br>
+                <b id="now-playing" style="font-size:1.6em; text-transform:uppercase;">AWAITING BROKER SELECTION</b><br>
+                <audio id="master-player" controls crossorigin="anonymous" style="width:100%; height:30px; margin-top:10px;"></audio>
             </div>
         </div>
         <div id="grid" class="portal-grid"></div>
@@ -112,28 +128,14 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "principal": "{:.2f}".format(float(r[3])), "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.06, 0.06))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "principal": "{:.2f}".format(float(r[3])), "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.08, 0.08))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
 
 @app.route('/mint-admin-portal')
 def minting_suite():
-    return render_template_string('''
-    <body style="background:#000; color:#0f3; padding:50px; font-family:monospace;">
-        <div style="border:1px solid #0f3; padding:20px; max-width:500px; margin:auto;">
-            <h1>PACECARD MINTING</h1>
-            <form action="/stock_asset" method="post">
-                <input name="title" placeholder="SONG TITLE" style="width:100%; margin-bottom:10px;"><br>
-                <input name="artist" placeholder="ARTIST" style="width:100%; margin-bottom:10px;"><br>
-                <input name="price" type="number" step="0.01" placeholder="MINT PRICE" style="width:100%; margin-bottom:10px;"><br>
-                <input name="audio_url" placeholder="FIREBASE AUDIO URL" style="width:100%; margin-bottom:10px;"><br>
-                <input name="image_url" placeholder="FIREBASE IMAGE URL" style="width:100%; margin-bottom:10px;"><br>
-                <button type="submit" style="width:100%; padding:20px; background:#0f3; color:#000; font-weight:bold;">PUSH TO EXCHANGE</button>
-            </form>
-        </div>
-    </body>
-    ''')
+    return render_template_string('''<body style="background:#000; color:#0f3; padding:50px;"><form action="/stock_asset" method="post"><input name="title" placeholder="SONG TITLE"><input name="artist" placeholder="ARTIST"><input name="price" type="number" step="0.01" placeholder="PRICE"><input name="audio_url" placeholder="FIREBASE AUDIO"><input name="image_url" placeholder="IMAGE URL"><button type="submit">MINT</button></form></body>''')
 
 @app.route('/stock_asset', methods=['POST'])
 def stock_asset():
