@@ -10,115 +10,102 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TERMINAL</title>
+        <title>AITIFY | TRADING TERMINAL</title>
         <style>
-            :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --bg: #020202; }
-            body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow-x: hidden; }
+            :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --bg: #050505; --panel: #0a0a0a; }
+            body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
             
-            .master-unit { 
-                background: #000; border-bottom: 2px solid var(--green); padding: 15px 30px;
-                display: flex; align-items: center; gap: 20px; position: sticky; top: 0; z-index: 1000;
-            }
-            #cover { width: 90px; height: 90px; border: 1px solid var(--green); object-fit: cover; filter: grayscale(50%); }
+            /* COMMAND CENTER LAYOUT */
+            .terminal-container { display: grid; grid-template-columns: 450px 1fr; height: 100vh; gap: 2px; background: #1a1a1a; }
             
-            .portal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 15px; padding: 30px; }
+            /* LEFT PANEL: BROADCAST MONITOR */
+            .broadcast-monitor { background: #000; padding: 30px; display: flex; flex-direction: column; border-right: 1px solid #222; }
+            #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--green); object-fit: cover; margin-bottom: 20px; box-shadow: 0 0 30px rgba(0,255,51,0.1); }
+            .on-air-status { color: var(--green); font-size: 10px; letter-spacing: 4px; margin-bottom: 5px; }
+            #now-playing { font-size: 2em; line-height: 1.1; margin-bottom: 20px; text-transform: uppercase; }
+            
+            /* RIGHT PANEL: TRADING FLOOR */
+            .trading-floor { background: #050505; overflow-y: auto; padding: 20px; }
             .pace-card { 
-                background: #080808; border: 1px solid #1a1a1a; padding: 20px; 
-                display: grid; grid-template-columns: 1fr 180px; gap: 15px;
+                background: var(--panel); border: 1px solid #1a1a1a; padding: 15px; margin-bottom: 10px;
+                display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 20px;
             }
+            .ticker { font-size: 2.5em; font-weight: 900; color: var(--green); letter-spacing: -3px; }
             
-            .ticker { font-size: 3.2em; font-weight: 900; color: var(--green); letter-spacing: -4px; line-height: 1; }
-            .asset-name { font-size: 1.1em; color: #aaa; text-transform: uppercase; margin-bottom: 5px; }
-            
-            /* THE BLOOMBERG GRAPH */
-            .spark-container { height: 60px; background: #000; border: 1px solid #111; position: relative; overflow: hidden; margin-top: 10px; }
-            canvas { width: 100%; height: 100%; pointer-events: none; }
-            
-            .mbbo-dock { display: flex; flex-direction: column; gap: 8px; }
+            /* BLOOMBERG BUTTONS */
+            .mbbo-dock { display: flex; flex-direction: column; gap: 5px; }
             .mbbo-btn { 
-                padding: 12px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
-                cursor: pointer; text-transform: uppercase; font-size: 10px; text-align: left;
+                padding: 10px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
+                cursor: pointer; text-transform: uppercase; font-size: 9px; border-left: 4px solid #444; text-align: left;
             }
-            .mbbo-btn:hover { border-color: #fff; }
-            .mbbo-btn.static { border-left: 5px solid var(--green); }
-            .mbbo-btn.forecast { border-left: 5px solid var(--blue); }
-            .mbbo-btn.currency { border-left: 5px solid var(--gold); }
-            
-            .status-tag { font-size: 9px; color: var(--green); opacity: 0.6; }
+            .mbbo-btn.static:hover { border-left-color: var(--green); background: #111; }
+            .mbbo-btn.forecast:hover { border-left-color: var(--blue); background: #111; }
+            .mbbo-btn.currency:hover { border-left-color: var(--gold); background: #111; }
+
+            /* MASTER AUDIO UNIT */
+            .audio-unit { margin-top: auto; border-top: 1px solid #222; padding-top: 20px; }
+            audio { width: 100%; height: 35px; filter: invert(1); }
         </style>
         <script>
-            let charts = {};
-
             async function sync() {
                 const res = await fetch('/api/data'); const data = await res.json();
                 if (data.roster) {
-                    const grid = document.getElementById('grid');
-                    grid.innerHTML = data.roster.map((i, idx) => `
+                    const floor = document.getElementById('floor');
+                    floor.innerHTML = data.roster.map((i, idx) => `
                         <div class="pace-card">
                             <div>
-                                <div class="status-tag">PACECARD // PORTAL_ID_100${idx}</div>
-                                <div class="asset-name">${i.song}</div>
+                                <div style="font-size:9px; color:#444;">ASSET_ID: 100${idx}</div>
+                                <div style="font-size:1.1em; color:#ddd;">${i.song}</div>
                                 <div class="ticker" id="price-${idx}">$${i.current_price}</div>
-                                <div class="spark-container"><canvas id="chart-${idx}"></canvas></div>
                             </div>
                             <div class="mbbo-dock">
-                                <button class="mbbo-btn static" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">MBBO: STATIC</button>
-                                <button class="mbbo-btn forecast" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'FORECAST')">MBBO: TARGET</button>
-                                <button class="mbbo-btn currency" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">MBBO: CURRENCY</button>
+                                <button class="mbbo-btn static" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
+                                <button class="mbbo-btn forecast" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'TARGET')">TARGET MBBO</button>
+                                <button class="mbbo-btn currency" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">FOREX MBBO</button>
                             </div>
                         </div> `).join('');
-                    
-                    data.roster.forEach((i, idx) => updateChart(idx, i.current_price));
                 }
             }
 
-            function updateChart(idx, price) {
-                const canvas = document.getElementById(`chart-${idx}`);
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                if (!charts[idx]) charts[idx] = [];
-                charts[idx].push(parseFloat(price));
-                if (charts[idx].length > 50) charts[idx].shift();
-                
-                ctx.clearRect(0,0, canvas.width, canvas.height);
-                ctx.strokeStyle = '#00ff33'; ctx.lineWidth = 2;
-                ctx.beginPath();
-                const step = canvas.width / 50;
-                charts[idx].forEach((p, i) => {
-                    const y = canvas.height - ((p - 5) * 10); // Simple scaling
-                    ctx.lineTo(i * step, y);
-                });
-                ctx.stroke();
-            }
-
-            function execute(audio, img, title, type) {
+            function ignite(audio, img, title, type) {
                 const player = document.getElementById('master-player');
-                document.getElementById('now-playing').innerText = type + " // " + title;
+                document.getElementById('now-playing').innerText = title;
+                document.getElementById('mode').innerText = type + " EXECUTION ACTIVE";
                 document.getElementById('cover').src = img;
+                
+                // AUDIO SYNC
                 player.src = audio;
                 player.load();
                 
-                // FORCE RESUME AUDIO CONTEXT
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                
-                player.play().catch(e => {
-                    alert("RADIO PORTAL STANDBY: Tap the Play button on the bar to ignite the stream.");
-                });
+                // BYPASS BROWSER SILENCE
+                const playPromise = player.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        console.log("Waiting for user trigger...");
+                        document.getElementById('mode').innerText = "PORTAL STANDBY - CLICK PLAY TO IGNITE";
+                    });
+                }
             }
             setInterval(sync, 4000); window.onload = sync;
         </script>
     </head>
     <body>
-        <div class="master-unit">
-            <img id="cover" src="https://via.placeholder.com/100?text=AITIFY">
-            <div style="flex-grow: 1;">
-                <span class="status-tag">97.7 THE FLAME // GLOBAL SATELLITE FEED</span><br>
-                <b id="now-playing" style="font-size:1.6em; text-transform:uppercase;">AWAITING BROKER SELECTION</b><br>
-                <audio id="master-player" controls crossorigin="anonymous" style="width:100%; height:30px; margin-top:10px;"></audio>
+        <div class="terminal-container">
+            <div class="broadcast-monitor">
+                <div class="on-air-status">97.7 THE FLAME // LIVE</div>
+                <img id="cover" src="https://via.placeholder.com/400?text=AITIFY+TERMINAL">
+                <div id="mode" style="font-size:10px; color:var(--gold); margin-bottom:5px;">AWAITING PORTAL ENTRY...</div>
+                <div id="now-playing">STANDBY FOR BROADCAST</div>
+                
+                <div class="audio-unit">
+                    <audio id="master-player" controls crossorigin="anonymous"></audio>
+                    <p style="font-size:9px; color:#444; margin-top:10px;">ENCRYPTED SATELLITE FEED // FIREBASE STORAGE CLOUD</p>
+                </div>
             </div>
+            
+            <div class="trading-floor" id="floor">
+                </div>
         </div>
-        <div id="grid" class="portal-grid"></div>
     </body>
     </html>
     ''')
