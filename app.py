@@ -10,38 +10,42 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | PRECISION TERMINAL V41</title>
+        <title>AITIFY | EMERALD PRECISION V42</title>
         <style>
-            :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; }
+            :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; --panel: #0a0a0a; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
-            .terminal-container { display: grid; grid-template-columns: 400px 1fr; height: 100vh; background: #111; }
             
-            /* MONITOR LEFT */
-            .monitor { background: #000; padding: 25px; display: flex; flex-direction: column; border-right: 1px solid #222; }
+            .terminal-container { display: grid; grid-template-columns: 420px 1fr; height: 100vh; background: #111; }
+            
+            /* MONITOR PANEL */
+            .monitor { background: #000; padding: 25px; display: flex; flex-direction: column; border-right: 2px solid #222; }
             #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--emerald); object-fit: cover; margin-bottom: 20px; box-shadow: 0 0 20px rgba(80,200,120,0.2); }
             .ignite-btn { background: var(--emerald); color: #000; border: none; padding: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 0 15px var(--emerald); }
 
-            /* TRADING FLOOR RIGHT */
-            .trading-floor { background: #050505; overflow-y: auto; padding: 30px; }
+            /* TRADING FLOOR */
+            .trading-floor { background: #050505; overflow-y: auto; padding: 40px; }
             .pace-card { 
-                background: #080808; border: 1px solid #1a1a1a; padding: 30px; 
-                display: flex; flex-direction: column; margin-bottom: 30px; min-height: 600px;
+                background: var(--panel); border: 1px solid #1a1a1a; padding: 35px; 
+                display: flex; flex-direction: column; margin-bottom: 40px; min-height: 650px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             }
             
-            .ticker-price { font-size: 8em; font-weight: 900; color: var(--emerald); letter-spacing: -12px; line-height: 0.7; margin-bottom: 20px; }
-            
-            /* STRETCHED OSCILLATOR */
-            .void-filler-graph { width: 100%; height: 300px; background: #000; border: 1px solid #111; position: relative; margin-bottom: 25px; }
-            .velocity-tag { position: absolute; top: 15px; right: 20px; background: rgba(0,0,0,0.8); padding: 5px 15px; border: 1px solid #333; z-index: 10; font-size: 2.5em; font-weight: bold; }
+            /* TOP BAR: PRICE + WIDGET */
+            .card-header { display: flex; align-items: flex-end; gap: 30px; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 20px; }
+            .ticker-price { font-size: 8.5em; font-weight: 900; color: var(--emerald); letter-spacing: -12px; line-height: 0.7; }
+            .velocity-widget { font-size: 3em; font-weight: bold; margin-bottom: 5px; }
+
+            /* STRETCHED PRECISION OSCILLATOR */
+            .void-filler-graph { width: 100%; height: 350px; background: #000; border: 1px solid #111; position: relative; margin-bottom: 30px; overflow: hidden; }
             canvas { width: 100%; height: 100%; }
 
-            /* BUTTONS UNDER OSCILLATOR */
-            .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+            /* COMMAND DOCK */
+            .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
             .mbbo-btn { 
-                padding: 22px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
-                cursor: pointer; text-transform: uppercase; font-size: 11px; border-top: 5px solid #444; text-align: center;
+                padding: 25px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
+                cursor: pointer; text-transform: uppercase; font-size: 12px; border-top: 6px solid #444; transition: 0.3s;
             }
-            .mbbo-btn:hover { background: #111; border-top-color: #fff; }
+            .mbbo-btn:hover { background: #111; border-top-color: var(--emerald); box-shadow: 0 0 20px rgba(80,200,120,0.1); }
             
             audio { width: 100%; height: 40px; filter: invert(1) hue-rotate(90deg); margin-top: auto; }
         </style>
@@ -54,24 +58,26 @@ def index():
                     if (floor.children.length !== data.roster.length) {
                         floor.innerHTML = data.roster.map((i, idx) => `
                             <div class="pace-card">
-                                <div style="font-size:10px; color:#444; letter-spacing:5px;">SATELLITE_SIGNAL // ${i.song}</div>
-                                <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
+                                <div style="font-size:10px; color:#444; letter-spacing:5px; margin-bottom:10px;">SATELLITE_LINK // ${i.song}</div>
+                                <div class="card-header">
+                                    <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
+                                    <div id="vel-${idx}" class="velocity-widget">--</div>
+                                </div>
                                 <div class="void-filler-graph">
-                                    <div id="vel-${idx}" class="velocity-tag">--</div>
                                     <canvas id="canvas-${idx}"></canvas>
                                 </div>
                                 <div class="mbbo-dock">
-                                    <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
-                                    <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'TARGET')">TARGET MBBO</button>
-                                    <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'FOREX')">CURRENCY MBBO</button>
+                                    <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}')">STATIC MBBO</button>
+                                    <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}')">TARGET MBBO</button>
+                                    <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}')">CURRENCY MBBO</button>
                                 </div>
                             </div> `).join('');
                     }
-                    data.roster.forEach((i, idx) => updatePulse(idx, i.current_price));
+                    data.roster.forEach((i, idx) => updateEmeraldPulse(idx, i.current_price));
                 }
             }
 
-            function updatePulse(idx, price) {
+            function updateEmeraldPulse(idx, price) {
                 const canvas = document.getElementById(`canvas-${idx}`);
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
@@ -82,28 +88,29 @@ def index():
                 charts[idx].push(parseFloat(price));
                 if (charts[idx].length > 300) charts[idx].shift();
 
-                document.getElementById(`price-${idx}`).innerText = `$${price}`;
-                document.getElementById(`price-${idx}`).style.color = diff >= 0 ? '#50C878' : '#ff3300';
-                
+                const pEl = document.getElementById(`price-${idx}`);
                 const vEl = document.getElementById(`vel-${idx}`);
+                pEl.innerText = `$${price}`;
+                pEl.style.color = diff >= 0 ? '#50C878' : '#ff3300';
                 vEl.innerText = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff);
                 vEl.style.color = diff >= 0 ? '#50C878' : '#ff3300';
 
                 ctx.clearRect(0,0, canvas.width, canvas.height);
                 const rgb = diff >= 0 ? '80, 200, 120' : '255, 51, 0';
                 
+                // AREA GRADIENT
                 let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                grad.addColorStop(0, `rgba(${rgb}, 0.5)`);
+                grad.addColorStop(0, `rgba(${rgb}, 0.4)`);
                 grad.addColorStop(1, `rgba(${rgb}, 0)`);
                 
                 ctx.fillStyle = grad;
                 ctx.strokeStyle = `rgb(${rgb})`;
-                ctx.lineWidth = 1; // HIGH TECH PRECISION
+                ctx.lineWidth = 1; // PIXEL PRECISION
                 
                 ctx.beginPath();
                 const step = canvas.width / 300;
                 charts[idx].forEach((p, i) => {
-                    const y = canvas.height - ((p - (price-0.2)) * 600);
+                    const y = canvas.height - ((p - (price-0.25)) * 600);
                     if(i === 0) ctx.moveTo(i * step, y);
                     else ctx.lineTo(i * step, y);
                 });
@@ -113,7 +120,7 @@ def index():
                 ctx.fill();
             }
 
-            function ignite(audio, img, title, type) {
+            function ignite(audio, img, title) {
                 const player = document.getElementById('master-player');
                 document.getElementById('now-playing').innerText = title;
                 document.getElementById('cover').src = img;
@@ -149,7 +156,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.60, 0.60))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.70, 0.70))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
