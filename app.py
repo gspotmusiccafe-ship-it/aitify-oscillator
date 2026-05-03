@@ -4,75 +4,105 @@ import psycopg2, random, os
 app = Flask(__name__)
 DB_URL = "postgresql://neondb_owner:npg_49bsxXGdfouV@ep-calm-sun-a4s6bd19-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
-# --- [1] THE CLEAN PUBLIC EXCHANGE (V30) ---
 @app.route('/')
 def index():
     return render_template_string('''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | 97.7 THE FLAME</title>
+        <title>AITIFY | TRADING PORTAL</title>
         <style>
-            :root { --green: #00ff33; --blue: #0088ff; --gold: #ffcc00; --glass: rgba(255,255,255,0.03); }
-            body { background: #000; color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; }
-            .radio-bar { background: #0a0a0a; border-bottom: 2px solid var(--green); padding: 25px 50px; display: grid; grid-template-columns: 110px 1fr; gap: 30px; align-items: center; }
-            #floor { height: calc(100vh - 150px); overflow-y: auto; }
-            .asset-row { display: grid; grid-template-columns: 80px 2fr 120px 180px 300px; padding: 25px 50px; border-bottom: 1px solid #111; align-items: center; }
-            .ticker { font-size: 2.8em; color: var(--green); font-weight: 900; letter-spacing: -4px; }
+            :root { --green: #00ff33; --blue: #0088ff; --gold: #ffcc00; --bg: #050505; }
+            body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; }
             
-            .trade-group { display: flex; gap: 10px; }
-            .mbbo-btn { 
-                flex: 1; border: 1px solid #333; background: #111; color: #fff; 
-                padding: 10px 5px; font-size: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase;
-                transition: 0.2s;
+            /* TOP BROADCAST UNIT */
+            .master-unit { 
+                background: #000; border-bottom: 3px solid var(--green); padding: 20px 40px;
+                display: flex; align-items: center; gap: 30px; position: sticky; top: 0; z-index: 100;
             }
-            .mbbo-btn:hover { border-color: #fff; }
-            .mbbo-btn.static:active { background: var(--green); color: #000; box-shadow: 0 0 15px var(--green); }
-            .mbbo-btn.forecast:active { background: var(--blue); color: #fff; box-shadow: 0 0 15px var(--blue); }
-            .mbbo-btn.currency:active { background: var(--gold); color: #000; box-shadow: 0 0 15px var(--gold); }
+            #cover { width: 120px; height: 120px; border: 2px solid var(--green); object-fit: cover; background: #111; }
             
-            #cover { width: 100px; height: 100px; border: 1px solid var(--green); object-fit: cover; }
+            /* PACECARD GRID */
+            .portal-grid { 
+                display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); 
+                gap: 20px; padding: 40px; 
+            }
+            .pace-card { 
+                background: #0a0a0a; border: 1px solid #222; padding: 25px; 
+                border-top: 4px solid var(--green); transition: 0.3s;
+            }
+            .pace-card:hover { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,51,0.1); }
+            
+            .ticker { font-size: 3.5em; font-weight: 900; color: var(--green); letter-spacing: -3px; margin: 10px 0; }
+            .asset-name { font-size: 1.4em; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 10px; }
+            
+            /* BLOOMBERG MBBO BUTTONS */
+            .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+            .mbbo-btn { 
+                padding: 15px 5px; font-weight: bold; border: none; cursor: pointer; text-transform: uppercase; font-size: 11px;
+                background: #111; color: #666; border: 1px solid #333;
+            }
+            .mbbo-btn.static:hover { background: var(--green); color: #000; border-color: var(--green); }
+            .mbbo-btn.forecast:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+            .mbbo-btn.currency:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+            
+            .status-tag { font-size: 10px; color: var(--green); letter-spacing: 2px; }
         </style>
         <script>
             async function sync() {
                 const res = await fetch('/api/data'); const data = await res.json();
                 if (data.roster) {
-                    document.getElementById('floor').innerHTML = data.roster.map((i, idx) => `
-                        <div class="asset-row">
-                            <div style="color:#444;">${1001 + idx}</div>
-                            <div><b>${i.song}</b><br><span style="color:var(--green); font-size:9px;">MBBO ACTIVE</span></div>
-                            <div style="color:#666;">$${i.principal}</div>
+                    const grid = document.getElementById('grid');
+                    grid.innerHTML = data.roster.map((i, idx) => `
+                        <div class="pace-card">
+                            <div class="status-tag">PACECARD PORTAL // 100${idx}</div>
+                            <div class="asset-name">${i.song}</div>
                             <div class="ticker" id="price-${idx}">$${i.current_price}</div>
-                            <div class="trade-group">
-                                <button class="mbbo-btn static" onclick="openTrade('${idx}', 'STATIC', '${i.song}', '${i.audio}', '${i.image}')">Static</button>
-                                <button class="mbbo-btn forecast" onclick="openTrade('${idx}', 'FORECAST', '${i.song}', '${i.audio}', '${i.image}')">Forecast</button>
-                                <button class="mbbo-btn currency" onclick="openTrade('${idx}', 'CURRENCY', '${i.song}', '${i.audio}', '${i.image}')">Currency</button>
+                            <div style="color:#666; font-size:12px;">MINT PRICE: $${i.principal}</div>
+                            
+                            <div class="mbbo-dock">
+                                <button class="mbbo-btn static" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">Static</button>
+                                <button class="mbbo-btn forecast" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'FORECAST')">Forecast</button>
+                                <button class="mbbo-btn currency" onclick="execute('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">Currency</button>
                             </div>
                         </div> `).join('');
                 }
             }
 
-            function openTrade(idx, type, title, audio, img) {
+            function execute(audio, img, title, type) {
                 const player = document.getElementById('master-player');
-                document.getElementById('now-playing').innerText = type + " TRADE: " + title;
-                document.getElementById('cover').src = img;
+                const cover = document.getElementById('cover');
+                const display = document.getElementById('now-playing');
+                
+                // FORCE SYNC
+                display.innerText = type + " EXECUTION: " + title;
+                cover.src = img;
                 player.src = audio;
-                player.load(); player.play();
-                alert(type + " Trade Executed. Market window open for duration of track.");
+                
+                // RE-MAP AND FIRE
+                player.load();
+                var playPromise = player.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log("Playback failed. User must interact.");
+                        alert("PORTAL LOCKED: Click the Play Button on the Radio Bar to finalize the Trade.");
+                    });
+                }
             }
             setInterval(sync, 4000); window.onload = sync;
         </script>
     </head>
     <body>
-        <div class="radio-bar">
-            <img id="cover" src="https://via.placeholder.com/100?text=AITIFY">
-            <div>
-                <span style="color:var(--green); font-size:10px; letter-spacing:5px;">AITIFY RAPID EXCHANGE</span><br>
-                <b id="now-playing" style="font-size:2em;">SELECT MBBO PATHWAY</b><br>
-                <audio id="master-player" controls style="width:100%; height:30px; margin-top:10px;"></audio>
+        <div class="master-unit">
+            <img id="cover" src="https://via.placeholder.com/120?text=AITIFY">
+            <div style="flex-grow: 1;">
+                <span class="status-tag">97.7 THE FLAME // SATELLITE FEED</span><br>
+                <b id="now-playing" style="font-size:2.2em; text-transform:uppercase;">READY FOR BROKER INPUT</b><br>
+                <audio id="master-player" controls crossorigin="anonymous" style="width:100%; height:40px; margin-top:15px;"></audio>
             </div>
         </div>
-        <div id="floor"></div>
+        <div id="grid" class="portal-grid"></div>
     </body>
     </html>
     ''')
@@ -82,7 +112,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "principal": "{:.2f}".format(float(r[3])), "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.04, 0.04))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "principal": "{:.2f}".format(float(r[3])), "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.06, 0.06))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
@@ -90,31 +120,26 @@ def get_data():
 @app.route('/mint-admin-portal')
 def minting_suite():
     return render_template_string('''
-    <!DOCTYPE html>
-    <html>
-    <head><title>AITIFY | STUDIO</title></head>
     <body style="background:#000; color:#0f3; padding:50px; font-family:monospace;">
         <div style="border:1px solid #0f3; padding:20px; max-width:500px; margin:auto;">
-            <h1>MINT MBBO ASSET</h1>
+            <h1>PACECARD MINTING</h1>
             <form action="/stock_asset" method="post">
-                <input type="text" name="title" placeholder="ASSET NAME" style="width:100%; margin-bottom:10px;"><br>
-                <input type="text" name="artist" placeholder="ARTIST" style="width:100%; margin-bottom:10px;"><br>
-                <input type="number" step="0.01" name="price" placeholder="MINT PRICE" style="width:100%; margin-bottom:10px;"><br>
-                <input type="text" name="audio_url" placeholder="FIREBASE AUDIO URL" style="width:100%; margin-bottom:10px;"><br>
-                <input type="text" name="image_url" placeholder="FIREBASE IMAGE URL" style="width:100%; margin-bottom:10px;"><br>
-                <button type="submit" style="width:100%; padding:15px; background:#0f3; color:#000; font-weight:bold;">MINT TO FLOOR</button>
+                <input name="title" placeholder="SONG TITLE" style="width:100%; margin-bottom:10px;"><br>
+                <input name="artist" placeholder="ARTIST" style="width:100%; margin-bottom:10px;"><br>
+                <input name="price" type="number" step="0.01" placeholder="MINT PRICE" style="width:100%; margin-bottom:10px;"><br>
+                <input name="audio_url" placeholder="FIREBASE AUDIO URL" style="width:100%; margin-bottom:10px;"><br>
+                <input name="image_url" placeholder="FIREBASE IMAGE URL" style="width:100%; margin-bottom:10px;"><br>
+                <button type="submit" style="width:100%; padding:20px; background:#0f3; color:#000; font-weight:bold;">PUSH TO EXCHANGE</button>
             </form>
         </div>
     </body>
-    </html>
     ''')
 
 @app.route('/stock_asset', methods=['POST'])
 def stock_asset():
-    title, artist, price = request.form.get('title'), request.form.get('artist'), request.form.get('price')
-    audio, image = request.form.get('audio_url'), request.form.get('image_url')
+    t, a, p, au, im = request.form.get('title'), request.form.get('artist'), request.form.get('price'), request.form.get('audio_url'), request.form.get('image_url')
     conn = psycopg2.connect(DB_URL); cur = conn.cursor()
-    cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", (f"{artist} - {title}", audio, image, price))
+    cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", (f"{a} - {t}", au, im, p))
     conn.commit(); cur.close(); conn.close()
     return redirect('/')
 
