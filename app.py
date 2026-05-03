@@ -10,60 +10,92 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | TERMINAL V34</title>
+        <title>AITIFY | BIG BOY TERMINAL V35</title>
         <style>
             :root { --green: #00ff33; --blue: #00eeff; --gold: #ffaa00; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
             
-            /* TRADING HUB LAYOUT */
-            .terminal-container { display: grid; grid-template-columns: 550px 1fr; height: 100vh; gap: 1px; background: #111; }
+            .terminal-container { display: grid; grid-template-columns: 400px 1fr; height: 100vh; gap: 2px; background: #111; }
             
-            /* MASTER MONITOR (LEFT) */
-            .monitor { background: #000; padding: 25px; display: flex; flex-direction: column; position: relative; border-right: 1px solid #222; }
-            #cover { width: 100%; aspect-ratio: 16/9; border: 1px solid #222; object-fit: cover; margin-bottom: 15px; filter: contrast(1.2) brightness(0.8); }
+            /* MASTER BROADCAST (LEFT) */
+            .monitor { background: #000; padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #222; }
+            #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--green); object-fit: cover; margin-bottom: 15px; box-shadow: 0 0 20px rgba(0,255,51,0.2); }
             
-            /* GAINS & LOSSES OSCILLATOR */
-            .oscillator-vault { flex-grow: 1; background: #050505; border: 1px solid #111; position: relative; overflow: hidden; margin-bottom: 20px; }
-            canvas#master-pulse { width: 100%; height: 100%; }
-            .vibration-data { position: absolute; top: 10px; right: 10px; text-align: right; font-weight: bold; }
-            .gain { color: var(--green); } .loss { color: var(--red); }
-            
-            /* PACECARDS (RIGHT) */
+            /* THE TRADING FLOOR (RIGHT) */
             .trading-floor { background: #000; overflow-y: auto; padding: 20px; }
             .pace-card { 
-                background: #080808; border-bottom: 1px solid #1a1a1a; padding: 20px; 
-                display: grid; grid-template-columns: 1fr 180px; align-items: center; margin-bottom: 5px;
+                background: #080808; border: 1px solid #1a1a1a; padding: 25px; 
+                display: grid; grid-template-columns: 1fr 220px; gap: 30px; margin-bottom: 15px; min-height: 350px;
             }
-            .ticker-price { font-size: 2.8em; font-weight: 900; color: var(--green); letter-spacing: -3px; }
             
+            /* FILLING THE VOID: OSCILLATOR */
+            .ticker-section { display: flex; flex-direction: column; justify-content: space-between; }
+            .ticker-price { font-size: 4.5em; font-weight: 900; color: var(--green); letter-spacing: -5px; line-height: 1; }
+            .void-filler-graph { flex-grow: 1; background: #050505; border: 1px solid #111; margin-top: 20px; position: relative; }
+            canvas { width: 100%; height: 100%; }
+
+            /* BLOOMBERG BUTTON DOCK */
+            .mbbo-dock { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
             .mbbo-btn { 
-                padding: 12px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
-                cursor: pointer; text-transform: uppercase; font-size: 10px; border-left: 5px solid #444; margin-bottom: 4px;
+                padding: 18px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff;
+                cursor: pointer; text-transform: uppercase; font-size: 11px; border-left: 6px solid #444;
             }
-            .mbbo-btn:hover { background: #111; border-left-color: #fff; }
+            .mbbo-btn.static:hover { border-left-color: var(--green); background: #0a110a; }
+            .mbbo-btn.forecast:hover { border-left-color: var(--blue); background: #0a0e11; }
+            .mbbo-btn.currency:hover { border-left-color: var(--gold); background: #110e0a; }
             
-            audio { width: 100%; height: 35px; filter: invert(1) hue-rotate(90deg); margin-top: 10px; }
+            audio { width: 100%; height: 35px; filter: invert(1); margin-top: auto; }
         </style>
         <script>
-            let pulseData = [];
-            
+            let charts = {};
+
             async function sync() {
                 const res = await fetch('/api/data'); const data = await res.json();
                 if (data.roster) {
                     const floor = document.getElementById('floor');
-                    floor.innerHTML = data.roster.map((i, idx) => `
-                        <div class="pace-card">
-                            <div>
-                                <div style="font-size:9px; color:#444;">ASSET_STATION: 97.7</div>
-                                <div style="color:#aaa;">${i.song}</div>
-                                <div class="ticker-price">$${i.current_price}</div>
-                            </div>
-                            <div style="display:flex; flex-direction:column;">
-                                <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
-                                <button class="mbbo-btn" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'FOREX')">CURRENCY MBBO</button>
-                            </div>
-                        </div> `).join('');
+                    if (floor.children.length !== data.roster.length) {
+                        floor.innerHTML = data.roster.map((i, idx) => `
+                            <div class="pace-card">
+                                <div class="ticker-section">
+                                    <div style="font-size:10px; color:var(--green); letter-spacing:3px;">ASSET_ID: 100${idx} // ${i.song}</div>
+                                    <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
+                                    <div class="void-filler-graph"><canvas id="canvas-${idx}"></canvas></div>
+                                </div>
+                                <div class="mbbo-dock">
+                                    <button class="mbbo-btn static" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'STATIC')">STATIC MBBO</button>
+                                    <button class="mbbo-btn forecast" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'TARGET')">TARGET MBBO</button>
+                                    <button class="mbbo-btn currency" onclick="ignite('${i.audio}', '${i.image}', '${i.song}', 'CURRENCY')">FOREX MBBO</button>
+                                </div>
+                            </div> `).join('');
+                    }
+                    data.roster.forEach((i, idx) => updatePace(idx, i.current_price));
                 }
+            }
+
+            function updatePace(idx, price) {
+                const pEl = document.getElementById(`price-${idx}`);
+                if (pEl) pEl.innerText = `$${price}`;
+                
+                const canvas = document.getElementById(`canvas-${idx}`);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                if (!charts[idx]) charts[idx] = [];
+                
+                let lastP = charts[idx][charts[idx].length - 1] || price;
+                charts[idx].push(parseFloat(price));
+                if (charts[idx].length > 60) charts[idx].shift();
+
+                ctx.clearRect(0,0, canvas.width, canvas.height);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = parseFloat(price) >= parseFloat(lastP) ? '#00ff33' : '#ff3300'; // RED FOR LOSSES
+                
+                ctx.beginPath();
+                const step = canvas.width / 60;
+                charts[idx].forEach((p, i) => {
+                    const y = canvas.height - ((p - (price-1)) * 50);
+                    ctx.lineTo(i * step, y);
+                });
+                ctx.stroke();
             }
 
             function ignite(audio, img, title, type) {
@@ -71,54 +103,19 @@ def index():
                 document.getElementById('now-playing').innerText = title;
                 document.getElementById('cover').src = img;
                 player.src = audio; player.load();
-                
-                const playPromise = player.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => { document.getElementById('now-playing').innerText = "CLICK PLAY TO IGNITE FEED"; });
-                }
-                startOscillator();
+                player.play().catch(() => { alert("IGNITION DELAY: Tap the Play button below."); });
             }
 
-            function startOscillator() {
-                const canvas = document.getElementById('master-pulse');
-                const ctx = canvas.getContext('2d');
-                function draw() {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.strokeStyle = '#00ff33'; ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    pulseData.push(Math.random() * 50 + 25);
-                    if(pulseData.length > 100) pulseData.shift();
-                    
-                    pulseData.forEach((val, i) => {
-                        ctx.lineTo(i * (canvas.width/100), canvas.height - val);
-                    });
-                    ctx.stroke();
-                    
-                    const roi = (Math.random() * 2.5).toFixed(2);
-                    document.getElementById('roi-display').innerHTML = `<span class="gain">+${roi}% VELOCITY</span>`;
-                    requestAnimationFrame(draw);
-                }
-                draw();
-            }
-
-            setInterval(sync, 4000); window.onload = sync;
+            setInterval(sync, 3000); window.onload = sync;
         </script>
     </head>
     <body>
         <div class="terminal-container">
             <div class="monitor">
-                <div style="font-size:10px; color:var(--green); letter-spacing:5px; margin-bottom:10px;">97.7 THE FLAME // SATELLITE MONITOR</div>
-                <img id="cover" src="https://via.placeholder.com/600x400?text=AITIFY+WAITING+FOR+FEED">
-                
-                <div class="oscillator-vault">
-                    <div class="vibration-data" id="roi-display"></div>
-                    <canvas id="master-pulse"></canvas>
-                </div>
-
-                <div id="now-playing" style="font-size:1.8em; text-transform:uppercase; margin-bottom:10px;">STANDBY</div>
+                <img id="cover" src="https://via.placeholder.com/400?text=AITIFY+TERMINAL">
+                <div id="now-playing" style="font-size:1.4em; text-transform:uppercase; margin-top:10px; color:#aaa;">STANDBY</div>
                 <audio id="master-player" controls crossorigin="anonymous"></audio>
             </div>
-            
             <div class="trading-floor" id="floor"></div>
         </div>
     </body>
@@ -130,7 +127,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.08, 0.08))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.15, 0.15))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
