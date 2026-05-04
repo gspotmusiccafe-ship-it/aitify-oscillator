@@ -10,7 +10,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>MUSIC MONEY MARKET | V50</title>
+        <title>MUSIC MONEY MARKET | V51</title>
         <style>
             :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
@@ -42,7 +42,7 @@ def index():
                     if (floor.children.length !== data.roster.length) {
                         floor.innerHTML = data.roster.map((i, idx) => `
                             <div class="pace-card">
-                                <div style="font-size:10px; color:#444; letter-spacing:5px; margin-bottom:10px;">MONEY_MARKET_LINK // ${i.song}</div>
+                                <div style="font-size:10px; color:#444; letter-spacing:5px; margin-bottom:10px;">MARKET_SYNC // ${i.song}</div>
                                 <div class="card-header">
                                     <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
                                     <div id="vel-${idx}" class="velocity-widget">--</div>
@@ -66,7 +66,7 @@ def index():
                 let lastP = charts[idx][charts[idx].length - 1] || price;
                 let diff = (parseFloat(price) - parseFloat(lastP)).toFixed(2);
                 charts[idx].push(parseFloat(price));
-                if (charts[idx].length > 1500) charts[idx].shift();
+                if (charts[idx].length > 2000) charts[idx].shift();
                 document.getElementById(`price-${idx}`).innerText = `$${price}`;
                 document.getElementById(`price-${idx}`).style.color = diff >= 0 ? '#50C878' : '#ff3300';
                 document.getElementById(`vel-${idx}`).innerText = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff);
@@ -74,10 +74,10 @@ def index():
                 ctx.clearRect(0,0, canvas.width, canvas.height);
                 const rgb = diff >= 0 ? '80, 200, 120' : '255, 51, 0';
                 let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                grad.addColorStop(0, `rgba(${rgb}, 0.3)`); grad.addColorStop(1, `rgba(${rgb}, 0)`);
+                grad.addColorStop(0, `rgba(${rgb}, 0.35)`); grad.addColorStop(1, `rgba(${rgb}, 0)`);
                 ctx.fillStyle = grad; ctx.strokeStyle = `rgb(${rgb})`; ctx.lineWidth = 0.5;
                 ctx.beginPath();
-                const step = canvas.width / 1500;
+                const step = canvas.width / 2000;
                 charts[idx].forEach((p, i) => {
                     const y = canvas.height - ((p - (price-0.25)) * 800);
                     if(i === 0) ctx.moveTo(i * step, y); else ctx.lineTo(i * step, y);
@@ -116,7 +116,7 @@ def get_data():
     try:
         conn = psycopg2.connect(DB_URL); cur = conn.cursor()
         cur.execute("SELECT song_title, audio_url, image_url, unit_price FROM gsr_artist_roster ORDER BY id DESC LIMIT 50;")
-        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.80, 0.80))} for r in cur.fetchall()]
+        roster = [{"song": r[0].upper(), "audio": r[1], "image": r[2], "current_price": "{:.2f}".format(float(r[3]) * 1.4 + random.uniform(-0.85, 0.85))} for r in cur.fetchall()]
         cur.close(); conn.close()
         return jsonify({"roster": roster})
     except: return jsonify({"roster": []})
@@ -131,20 +131,22 @@ def minting_suite():
         <style>
             body { background: #030303; color: #fff; font-family: 'IBM Plex Mono', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; 
                 background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 30px 30px; }
-            .mint-frame { background: rgba(8,8,8,0.9); border: 1px solid #222; padding: 50px; width: 650px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); backdrop-filter: blur(10px); }
-            input { width: 100%; padding: 20px; margin-bottom: 20px; background: #000; border: 1px solid #333; color: #50C878; font-size: 1.2em; box-sizing: border-box; }
-            button { width: 100%; padding: 25px; background: #50C878; border: none; color: #000; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.1em; letter-spacing: 3px; }
+            .mint-frame { background: rgba(8,8,8,0.95); border: 1px solid #333; padding: 60px; width: 700px; box-shadow: 0 50px 120px rgba(0,0,0,0.9); backdrop-filter: blur(15px); }
+            input { width: 100%; padding: 22px; margin-bottom: 25px; background: #000; border: 1px solid #444; color: #50C878; font-size: 1.3em; box-sizing: border-box; }
+            input:focus { border-color: #50C878; outline: none; }
+            button { width: 100%; padding: 28px; background: #50C878; border: none; color: #000; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.2em; letter-spacing: 4px; }
+            button:hover { background: #fff; }
         </style>
     </head>
     <body>
         <div class="mint-frame">
-            <h2 style="color: #50C878; margin-bottom: 35px; letter-spacing: 5px; text-align: center;">MARKET_ASSET_MINT</h2>
+            <h2 style="color: #50C878; margin-bottom: 40px; letter-spacing: 8px; text-align: center;">MARKET_ASSET_MINT</h2>
             <form action="/stock_asset" method="post">
-                <input name="title" placeholder="SONG TITLE">
-                <input name="artist" placeholder="ARTIST">
-                <input name="price" type="number" step="0.01" placeholder="BASE PRICE ($)">
-                <input name="audio_url" placeholder="FIREBASE AUDIO URL">
-                <input name="image_url" placeholder="IMAGE ASSET URL">
+                <input name="title" placeholder="SONG TITLE" required>
+                <input name="artist" placeholder="ARTIST" required>
+                <input name="price" type="number" step="0.01" placeholder="BASE PRICE ($)" required>
+                <input name="audio_url" placeholder="FIREBASE AUDIO URL" required>
+                <input name="image_url" placeholder="IMAGE ASSET URL" required>
                 <button type="submit">MINT ASSET</button>
             </form>
         </div>
@@ -154,17 +156,21 @@ def minting_suite():
 
 @app.route('/stock_asset', methods=['POST'])
 def stock_asset():
-    title = request.form.get('title')
-    artist = request.form.get('artist')
-    unit_price = float(request.form.get('price')) # FIX: Explicit numeric cast
-    audio_url = request.form.get('audio_url')
-    image_url = request.form.get('image_url')
-    
-    conn = psycopg2.connect(DB_URL); cur = conn.cursor()
-    cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", 
-                (f"{artist} - {title}", audio_url, image_url, unit_price))
-    conn.commit(); cur.close(); conn.close()
-    return redirect('/')
+    try:
+        title = request.form.get('title')
+        artist = request.form.get('artist')
+        price_val = request.form.get('price')
+        unit_price = float(price_val) if price_val else 0.0
+        audio_url = request.form.get('audio_url')
+        image_url = request.form.get('image_url')
+        
+        conn = psycopg2.connect(DB_URL); cur = conn.cursor()
+        cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", 
+                    (f"{artist} - {title}", audio_url, image_url, unit_price))
+        conn.commit(); cur.close(); conn.close()
+        return redirect('/')
+    except Exception as e:
+        return f"MINTING ERROR: {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
