@@ -10,28 +10,24 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AITIFY | KRAKEN TERMINAL V43</title>
+        <title>AITIFY | KRAKEN PRECISION V44</title>
         <style>
-            :root { --emerald: #50C878; --red: #ff3300; --bg: #050505; --panel: #0d0d0d; }
+            :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
-            .terminal-container { display: grid; grid-template-columns: 400px 1fr; height: 100vh; background: #1a1a1a; }
+            .terminal-container { display: grid; grid-template-columns: 420px 1fr; height: 100vh; background: #111; }
             .monitor { background: #000; padding: 25px; display: flex; flex-direction: column; border-right: 1px solid #222; }
-            #cover { width: 100%; aspect-ratio: 1; border: 1px solid #333; object-fit: cover; margin-bottom: 20px; }
-            .ignite-btn { background: var(--emerald); color: #000; border: none; padding: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; }
-            .trading-floor { background: #020202; overflow-y: auto; padding: 40px; }
-            .pace-card { 
-                background: var(--panel); border: 1px solid #1a1a1a; padding: 35px; 
-                display: flex; flex-direction: column; margin-bottom: 40px; min-height: 680px;
-                box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-            }
-            .card-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 15px; }
-            .ticker-price { font-size: 8em; font-weight: 900; color: var(--emerald); letter-spacing: -10px; line-height: 0.8; }
-            .velocity-ticker { font-size: 3em; font-weight: bold; }
-            .void-filler-graph { width: 100%; height: 380px; background: #000; border: 1px solid #111; position: relative; margin-bottom: 30px; }
+            #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--emerald); object-fit: cover; margin-bottom: 20px; box-shadow: 0 0 20px rgba(80,200,120,0.2); }
+            .ignite-btn { background: var(--emerald); color: #000; border: none; padding: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 0 15px var(--emerald); }
+            .trading-floor { background: #050505; overflow-y: auto; padding: 40px; }
+            .pace-card { background: #080808; border: 1px solid #1a1a1a; padding: 35px; display: flex; flex-direction: column; margin-bottom: 40px; min-height: 650px; }
+            .card-header { display: flex; align-items: flex-end; gap: 30px; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 20px; }
+            .ticker-price { font-size: 8.5em; font-weight: 900; color: var(--emerald); letter-spacing: -12px; line-height: 0.7; }
+            .velocity-widget { font-size: 3em; font-weight: bold; margin-bottom: 5px; }
+            .void-filler-graph { width: 100%; height: 350px; background: #000; border: 1px solid #111; position: relative; margin-bottom: 30px; overflow: hidden; }
             canvas { width: 100%; height: 100%; }
-            .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-            .mbbo-btn { padding: 22px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff; cursor: pointer; text-transform: uppercase; font-size: 11px; border-top: 5px solid #444; }
-            .mbbo-btn:hover { border-top-color: var(--emerald); background: #111; }
+            .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+            .mbbo-btn { padding: 25px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff; cursor: pointer; text-transform: uppercase; font-size: 12px; border-top: 6px solid #444; }
+            .mbbo-btn:hover { border-top-color: var(--emerald); }
             audio { width: 100%; height: 40px; filter: invert(1) hue-rotate(90deg); margin-top: auto; }
         </style>
         <script>
@@ -43,10 +39,10 @@ def index():
                     if (floor.children.length !== data.roster.length) {
                         floor.innerHTML = data.roster.map((i, idx) => `
                             <div class="pace-card">
-                                <div style="font-size:9px; color:#444; letter-spacing:4px; margin-bottom:10px;">SIGNAL_STATION_97.7 // ${i.song}</div>
+                                <div style="font-size:10px; color:#444; letter-spacing:5px; margin-bottom:10px;">SATELLITE_LINK // ${i.song}</div>
                                 <div class="card-header">
                                     <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
-                                    <div id="vel-${idx}" class="velocity-ticker">--</div>
+                                    <div id="vel-${idx}" class="velocity-widget">--</div>
                                 </div>
                                 <div class="void-filler-graph"><canvas id="canvas-${idx}"></canvas></div>
                                 <div class="mbbo-dock">
@@ -56,10 +52,10 @@ def index():
                                 </div>
                             </div> `).join('');
                     }
-                    data.roster.forEach((i, idx) => updateKrakenPulse(idx, i.current_price));
+                    data.roster.forEach((i, idx) => updatePulse(idx, i.current_price));
                 }
             }
-            function updateKrakenPulse(idx, price) {
+            function updatePulse(idx, price) {
                 const canvas = document.getElementById(`canvas-${idx}`);
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
@@ -67,30 +63,26 @@ def index():
                 let lastP = charts[idx][charts[idx].length - 1] || price;
                 let diff = (parseFloat(price) - parseFloat(lastP)).toFixed(2);
                 charts[idx].push(parseFloat(price));
-                if (charts[idx].length > 400) charts[idx].shift();
+                if (charts[idx].length > 500) charts[idx].shift();
                 document.getElementById(`price-${idx}`).innerText = `$${price}`;
-                document.getElementById(`price-${idx}`).style.color = diff >= 0 ? 'var(--emerald)' : 'var(--red)';
-                const vEl = document.getElementById(`vel-${idx}`);
-                vEl.innerText = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff);
-                vEl.style.color = diff >= 0 ? 'var(--emerald)' : 'var(--red)';
+                document.getElementById(`price-${idx}`).style.color = diff >= 0 ? '#50C878' : '#ff3300';
+                document.getElementById(`vel-${idx}`).innerText = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff);
+                document.getElementById(`vel-${idx}`).style.color = diff >= 0 ? '#50C878' : '#ff3300';
                 ctx.clearRect(0,0, canvas.width, canvas.height);
                 const rgb = diff >= 0 ? '80, 200, 120' : '255, 51, 0';
                 let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                grad.addColorStop(0, `rgba(${rgb}, 0.2)`);
+                grad.addColorStop(0, `rgba(${rgb}, 0.3)`);
                 grad.addColorStop(1, `rgba(${rgb}, 0)`);
                 ctx.fillStyle = grad;
                 ctx.strokeStyle = `rgb(${rgb})`;
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                const step = canvas.width / 400;
+                const step = canvas.width / 500;
                 charts[idx].forEach((p, i) => {
-                    const y = canvas.height - ((p - (price-0.2)) * 600);
-                    if(i === 0) ctx.moveTo(i * step, y);
-                    else ctx.lineTo(i * step, y);
+                    const y = canvas.height - ((p - (price-0.2)) * 800);
+                    if(i === 0) ctx.moveTo(i * step, y); else ctx.lineTo(i * step, y);
                 });
-                ctx.stroke();
-                ctx.lineTo(charts[idx].length * step, canvas.height);
-                ctx.lineTo(0, canvas.height); ctx.fill();
+                ctx.stroke(); ctx.lineTo(charts[idx].length * step, canvas.height); ctx.lineTo(0, canvas.height); ctx.fill();
             }
             function ignite(audio, img, title) {
                 const player = document.getElementById('master-player');
@@ -121,4 +113,4 @@ def index():
     </html>
     ''')
 
-# ... rest of routes (api, mint, stock_asset) same as V42 ...
+# ... API and MINT routes remain the same ...
