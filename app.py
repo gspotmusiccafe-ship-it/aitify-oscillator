@@ -10,7 +10,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>MUSIC MONEY MARKET | V47</title>
+        <title>MUSIC MONEY MARKET | V48</title>
         <style>
             :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
@@ -155,6 +155,7 @@ def minting_suite():
 def stock_asset():
     t, a, p, au, im = request.form.get('title'), request.form.get('artist'), request.form.get('price'), request.form.get('audio_url'), request.form.get('image_url')
     conn = psycopg2.connect(DB_URL); cur = conn.cursor()
+    # SYNCED: mapping 'p' (from form 'price') to 'unit_price' in DB
     cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", (f"{a} - {t}", au, im, p))
     conn.commit(); cur.close(); conn.close()
     return redirect('/')
