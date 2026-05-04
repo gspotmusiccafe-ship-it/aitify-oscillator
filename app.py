@@ -10,7 +10,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>MUSIC MONEY MARKET | V48</title>
+        <title>MUSIC MONEY MARKET | V49</title>
         <style>
             :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
@@ -19,18 +19,19 @@ def index():
             #cover { width: 100%; aspect-ratio: 1; border: 1px solid var(--emerald); object-fit: cover; margin-bottom: 20px; box-shadow: 0 0 20px rgba(80,200,120,0.2); }
             .ignite-btn { background: var(--emerald); color: #000; border: none; padding: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 0 15px var(--emerald); }
             .trading-floor { background: #050505; overflow-y: auto; padding: 40px; }
-            .pace-card { background: #080808; border: 1px solid #1a1a1a; padding: 35px; display: flex; flex-direction: column; margin-bottom: 40px; min-height: 720px; box-shadow: 0 30px 60px rgba(0,0,0,0.8); }
+            .pace-card { background: #080808; border: 1px solid #1a1a1a; padding: 35px; display: flex; flex-direction: column; margin-bottom: 40px; min-height: 750px; box-shadow: 0 30px 60px rgba(0,0,0,0.8); }
             .card-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 20px; }
-            .ticker-price { font-size: 9em; font-weight: 900; color: var(--emerald); letter-spacing: -14px; line-height: 0.7; }
-            .velocity-widget { font-size: 3.5em; font-weight: bold; font-family: 'Courier New'; }
+            .ticker-price { font-size: 9.5em; font-weight: 900; color: var(--emerald); letter-spacing: -15px; line-height: 0.7; }
+            .velocity-widget { font-size: 4em; font-weight: bold; font-family: 'Courier New'; }
             .void-filler-graph { 
-                width: 100%; height: 420px; background: #000; border: 1px solid #111; position: relative; margin-bottom: 30px; overflow: hidden;
+                width: 100%; height: 450px; background: #000; border: 1px solid #111; position: relative; margin-bottom: 30px; overflow: hidden;
                 background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
                 background-size: 30px 30px;
             }
             canvas { width: 100%; height: 100%; }
             .mbbo-dock { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-            .mbbo-btn { padding: 25px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff; cursor: pointer; text-transform: uppercase; font-size: 11px; border-top: 8px solid #444; }
+            .mbbo-btn { padding: 25px; font-weight: bold; border: 1px solid #333; background: #000; color: #fff; cursor: pointer; text-transform: uppercase; font-size: 11px; border-top: 8px solid #444; transition: 0.2s; }
+            .mbbo-btn:hover { border-top-color: var(--emerald); background: #111; }
             audio { width: 100%; height: 40px; filter: invert(1) hue-rotate(90deg); margin-top: auto; }
         </style>
         <script>
@@ -42,7 +43,7 @@ def index():
                     if (floor.children.length !== data.roster.length) {
                         floor.innerHTML = data.roster.map((i, idx) => `
                             <div class="pace-card">
-                                <div style="font-size:10px; color:#444; letter-spacing:5px; margin-bottom:10px;">MARKET_LEDGER // ${i.song}</div>
+                                <div style="font-size:10px; color:#444; letter-spacing:5px; margin-bottom:10px;">MONEY_MARKET_LINK // ${i.song}</div>
                                 <div class="card-header">
                                     <div class="ticker-price" id="price-${idx}">$${i.current_price}</div>
                                     <div id="vel-${idx}" class="velocity-widget">--</div>
@@ -66,7 +67,7 @@ def index():
                 let lastP = charts[idx][charts[idx].length - 1] || price;
                 let diff = (parseFloat(price) - parseFloat(lastP)).toFixed(2);
                 charts[idx].push(parseFloat(price));
-                if (charts[idx].length > 800) charts[idx].shift();
+                if (charts[idx].length > 1000) charts[idx].shift();
                 document.getElementById(`price-${idx}`).innerText = `$${price}`;
                 document.getElementById(`price-${idx}`).style.color = diff >= 0 ? '#50C878' : '#ff3300';
                 document.getElementById(`vel-${idx}`).innerText = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff);
@@ -77,7 +78,7 @@ def index():
                 grad.addColorStop(0, `rgba(${rgb}, 0.3)`); grad.addColorStop(1, `rgba(${rgb}, 0)`);
                 ctx.fillStyle = grad; ctx.strokeStyle = `rgb(${rgb})`; ctx.lineWidth = 1;
                 ctx.beginPath();
-                const step = canvas.width / 800;
+                const step = canvas.width / 1000;
                 charts[idx].forEach((p, i) => {
                     const y = canvas.height - ((p - (price-0.25)) * 800);
                     if(i === 0) ctx.moveTo(i * step, y); else ctx.lineTo(i * step, y);
@@ -153,10 +154,17 @@ def minting_suite():
 
 @app.route('/stock_asset', methods=['POST'])
 def stock_asset():
-    t, a, p, au, im = request.form.get('title'), request.form.get('artist'), request.form.get('price'), request.form.get('audio_url'), request.form.get('image_url')
+    # Syncing the form fields to the database columns
+    title = request.form.get('title')
+    artist = request.form.get('artist')
+    unit_price = request.form.get('price')
+    audio_url = request.form.get('audio_url')
+    image_url = request.form.get('image_url')
+    
     conn = psycopg2.connect(DB_URL); cur = conn.cursor()
-    # SYNCED: mapping 'p' (from form 'price') to 'unit_price' in DB
-    cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", (f"{a} - {t}", au, im, p))
+    # Explicit mapping to unit_price column
+    cur.execute("INSERT INTO gsr_artist_roster (song_title, audio_url, image_url, unit_price) VALUES (%s, %s, %s, %s)", 
+                (f"{artist} - {title}", audio_url, image_url, unit_price))
     conn.commit(); cur.close(); conn.close()
     return redirect('/')
 
