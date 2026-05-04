@@ -10,7 +10,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>MUSIC MONEY MARKET | V46</title>
+        <title>MUSIC MONEY MARKET | V47</title>
         <style>
             :root { --emerald: #50C878; --red: #ff3300; --bg: #020202; }
             body { background: var(--bg); color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 0; overflow: hidden; height: 100vh; }
@@ -130,16 +130,14 @@ def minting_suite():
         <title>ADMIN | MINTING SUITE</title>
         <style>
             body { background: #030303; color: #fff; font-family: 'IBM Plex Mono', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .mint-frame { background: #080808; border: 1px solid #222; padding: 50px; width: 600px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
-            input { width: 100%; padding: 15px; margin-bottom: 20px; background: #000; border: 1px solid #333; color: #50C878; font-family: inherit; box-sizing: border-box; }
-            input:focus { border-color: #50C878; outline: none; }
-            button { width: 100%; padding: 20px; background: #50C878; border: none; color: #000; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
-            button:hover { background: #fff; }
+            .mint-frame { background: #080808; border: 1px solid #222; padding: 50px; width: 650px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
+            input { width: 100%; padding: 20px; margin-bottom: 20px; background: #000; border: 1px solid #333; color: #50C878; font-size: 1.2em; box-sizing: border-box; }
+            button { width: 100%; padding: 25px; background: #50C878; border: none; color: #000; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.1em; letter-spacing: 3px; }
         </style>
     </head>
     <body>
         <div class="mint-frame">
-            <h2 style="color: #50C878; margin-bottom: 30px; letter-spacing: 5px;">MARKET_ASSET_MINT</h2>
+            <h2 style="color: #50C878; margin-bottom: 35px; letter-spacing: 5px; text-align: center;">MARKET_ASSET_MINT</h2>
             <form action="/stock_asset" method="post">
                 <input name="title" placeholder="SONG TITLE">
                 <input name="artist" placeholder="ARTIST">
