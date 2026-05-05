@@ -1,68 +1,74 @@
 import os
-import json
+import random
 from flask import Flask, jsonify, request
 import firebase_admin
 from firebase_admin import credentials, storage
 
 app = Flask(__name__)
 
-# 1. THE FULL 12-TRACK ROSTER
+# --- BANKER'S CONTROL PANEL ---
+# You can change these two numbers anytime to shift the entire market logic
+BANKER_FORECAST = 75  # The "Vision" target shown to the market
+BANKER_CLOSE = 60     # The "Execution" point where you pull the trigger
+# ------------------------------
+
 SONG_ASSETS = [
-    {"id": 0, "title": "BETTER THAN GOOD", "file": "BETTER THAN GOOD (1).mp3", "price": 1.05},
-    {"id": 1, "title": "I'M NOT HER", "file": "I'M NOT HER.mp3", "price": 0.98},
-    {"id": 2, "title": "LOVE MAKE OVER", "file": "LOVE MAKE OVER.mp3", "price": 1.12},
-    {"id": 3, "title": "TIMES UP", "file": "TIMES UP.mp3", "price": 0.85},
-    {"id": 4, "title": "SILENT CRIES", "file": "SILENT CRIES NOBODY HEARS.mp3", "price": 1.20},
-    {"id": 5, "title": "G-SPOT CLASSIC", "file": "G_SPOT_RECORDS_THEME.mp3", "price": 2.50},
-    {"id": 6, "title": "NAWFSIDE KING", "file": "NAWFSIDE_KING.mp3", "price": 1.10},
-    {"id": 7, "title": "BLUE FLAME SOUL", "file": "BLUE_FLAME_SOUL.mp3", "price": 0.95},
-    {"id": 8, "title": "SONGETRY VOL 1", "file": "SONGETRY_1.mp3", "price": 1.30},
-    {"id": 9, "title": "SHANAE BUTTA", "file": "MS_BUTTA_VIBE.mp3", "price": 1.15},
-    {"id": 10, "title": "BLACK NEON", "file": "BLACK_NEON_SAINTS.mp3", "price": 1.02},
-    {"id": 11, "title": "SHOWTOWN THEME", "file": "SHOWTOWN_NEWS.mp3", "price": 0.90}
+    {"id": 0, "title": "BETTER THAN GOOD", "file": "BETTER THAN GOOD (1).mp3", "floor": 0.85, "ceiling": 2.50},
+    {"id": 1, "title": "I'M NOT HER", "file": "I'M NOT HER.mp3", "floor": 0.90, "ceiling": 3.00},
+    {"id": 4, "title": "SILENT CRIES", "file": "SILENT CRIES NOBODY HEARS.mp3", "floor": 0.95, "ceiling": 5.00},
+    {"id": 5, "title": "G-SPOT CLASSIC", "file": "G_SPOT_RECORDS_THEME.mp3", "floor": 1.20, "ceiling": 10.00},
 ]
 
-# 2. FIREBASE HANDSHAKE
 if not firebase_admin._apps:
     cred = credentials.Certificate("/etc/secrets/firebase-key.json") 
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': 'aititrade-radio-97.firebasestorage.app'
-    })
-
+    firebase_admin.initialize_app(cred, {'storageBucket': 'aititrade-radio-97.firebasestorage.app'})
 bucket = storage.bucket()
 
-# 3. THE LIVE MARKET TICKER
 @app.route('/')
-def health_check():
-    ticker_html = "<body style='background:black;color:#00ff00;font-family:monospace;padding:20px;'>"
-    ticker_html += "<h1 style='color:white;'>97.7 THE FLAME | LIVE MUSIC MARKET</h1><hr>"
-    ticker_html += "<div style='display:grid;grid-template-columns: 1fr 1fr;gap:10px;'>"
-    for song in SONG_ASSETS:
-        ticker_html += f"<div style='border:1px solid #333;padding:10px;'>{song['title']}: <span style='color:cyan;'>${song['price']}</span></div>"
-    ticker_html += "</div></body>"
-    return ticker_html
+def mbbo_terminal():
+    # Adding a dynamic query check: 
+    # Use ?forecast=80&close=50 in the URL to override the Banker Panel instantly
+    forecast = request.args.get('forecast', BANKER_FORECAST, type=int)
+    close = request.args.get('close', BANKER_CLOSE, type=int)
 
-# 4. THE TRADE EXECUTION (The "Bastard" Hook)
+    ticker_html = "<body style='background:black;color:#00ff00;font-family:monospace;padding:20px;'>"
+    ticker_html += f"<h1 style='color:white;'>97.7 THE FLAME | REGULATOR: {forecast}% / {close}%</h1><hr>"
+    
+    for song in SONG_ASSETS:
+        current_pct = random.randint(0, 100)
+        market_price = round(song['floor'] + (song['ceiling'] - song['floor']) * (current_pct / 100), 2)
+        
+        is_closed = current_pct >= close
+        status = "TARGET HIT" if current_pct >= forecast else "FORECASTING"
+        signal = "MARKET CLOSED" if is_closed else "OPEN"
+        
+        color = "#ff00ff" if is_closed else "#00ff00"
+        
+        ticker_html += f"""
+        <div style='border:2px solid {color};padding:15px;margin-bottom:10px;background:#111;'>
+            <b style='color:white;'>{song['title']}</b> | MKT: {current_pct}% (${market_price})<br>
+            <span style='color:{color}; font-weight:bold;'>[{signal}]</span> 
+            <small style='color:#666;'> (Target: {forecast}% | Banker Close: {close}%)</small>
+        </div>
+        """
+    return ticker_html + "</body>"
+
 @app.route('/api/trade', methods=['POST'])
 def execute_trade():
+    # Power Move: This endpoint now accepts custom close instructions
     data = request.json
     song_id = data.get('song_id', 0)
+    banker_override = data.get('close_at', BANKER_CLOSE)
     
-    # Secure validation
-    if song_id >= len(SONG_ASSETS):
-        return jsonify({"error": "Asset not found"}), 404
-        
-    song = SONG_ASSETS[song_id]
+    song = next((s for s in SONG_ASSETS if s['id'] == song_id), SONG_ASSETS[0])
     blob = bucket.blob(song['file'])
-    
-    # Generate the 1-hour "Trade Access" URL
     url = blob.generate_signed_url(expiration=3600)
     
     return jsonify({
         "status": "TRADED",
-        "song": song['title'],
+        "asset": song['title'],
         "stream_url": url,
-        "market_impact": "BULLISH"
+        "banker_instruction": f"CLOSE_AT_{banker_override}_PERCENT"
     })
 
 if __name__ == '__main__':
