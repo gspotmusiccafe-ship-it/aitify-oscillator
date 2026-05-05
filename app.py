@@ -46,6 +46,9 @@ def execute_trade():
     song = next((s for s in SONG_ASSETS if s['id'] == song_id), SONG_ASSETS[0])
     url = bucket.blob(song['file']).generate_signed_url(expiration=3600)
     return jsonify({"stream_url": url})
-
+@app.route('/')
+def home():
+    # This gives the browser something to look at so you don't get a 404
+    return "<h1>97.7 THE FLAME | REGULATOR ACTIVE</h1><p>The DEX is pulling data from /api/market-data</p>"
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
